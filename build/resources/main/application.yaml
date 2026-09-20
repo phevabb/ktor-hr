@@ -1,0 +1,7 @@
+ktor:
+  deployment:
+    port: 8888
+  application:
+    modules:
+
+      - com.hr.MainKt.module
