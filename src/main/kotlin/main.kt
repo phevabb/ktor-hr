@@ -9,6 +9,7 @@ import com.hr.currentgrade.currentGradeModule
 import com.hr.department.departmentModule
 import com.hr.districts.districtModule
 import com.hr.managementUnits.managementUnitModule
+import com.hr.nextgrade.configureNextGradeModule
 import com.hr.onleavetype.onLeaveTypeModule
 import com.hr.position.positionModule
 import com.hr.region.regionModule
@@ -44,6 +45,7 @@ fun Application.module() {
     staffClassModule()
     positionModule()
     accountModule()
+    configureNextGradeModule()
 }
 
 
