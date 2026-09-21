@@ -21,8 +21,10 @@ import kotlinx.coroutines.flow.singleOrNull
 import kotlinx.coroutines.flow.toList
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.r2dbc.deleteWhere
 import org.jetbrains.exposed.v1.r2dbc.insertAndGetId
 import org.jetbrains.exposed.v1.r2dbc.selectAll
@@ -272,28 +274,58 @@ object AccountRepository {
 
 
     suspend fun userIdExists(
-        userId: String
+        userId: String,
+        excludeAccountId: Int? = null
     ): Boolean {
+        val normalizedUserId =
+            userId.trim()
+
+        if (normalizedUserId.isBlank()) {
+            return false
+        }
+
         return Accounts
             .selectAll()
             .where {
-                Accounts.userId eq userId
+                if (excludeAccountId == null) {
+                    Accounts.userId eq normalizedUserId
+                } else {
+                    (
+                            Accounts.userId eq normalizedUserId
+                            ) and (
+                            Accounts.id neq excludeAccountId
+                            )
+                }
             }
             .singleOrNull() != null
     }
 
     suspend fun phoneNumberExists(
-        phoneNumber: String
+        phoneNumber: String,
+        excludeAccountId: Int? = null
     ): Boolean {
+        val normalizedPhoneNumber =
+            phoneNumber.trim()
+
+        if (normalizedPhoneNumber.isBlank()) {
+            return false
+        }
+
         return Accounts
             .selectAll()
             .where {
-                Accounts.phoneNumber eq phoneNumber
+                if (excludeAccountId == null) {
+                    Accounts.phoneNumber eq normalizedPhoneNumber
+                } else {
+                    (
+                            Accounts.phoneNumber eq normalizedPhoneNumber
+                            ) and (
+                            Accounts.id neq excludeAccountId
+                            )
+                }
             }
             .singleOrNull() != null
     }
-
-
 
 
 
@@ -586,12 +618,11 @@ object AccountRepository {
 
         return Accounts
             .insertAndGetId {
-
                 /*
                  * Login and authentication
                  */
 
-                it[Accounts.userId] =
+                it[Accounts.userId]=
                     request.userId.trim()
 
                 it[Accounts.passwordHash] =
@@ -614,22 +645,32 @@ object AccountRepository {
                  */
 
                 it[Accounts.firstName] =
-                    request.firstName?.trim()
+                    cleanNullableString(
+                        request.firstName
+                    )
 
                 it[Accounts.middleName] =
-                    request.middleName?.trim()
+                    cleanNullableString(
+                        request.middleName
+                    )
 
                 it[Accounts.lastName] =
-                    request.lastName?.trim()
+                    cleanNullableString(
+                        request.lastName
+                    )
 
                 it[Accounts.maidenName] =
-                    request.maidenName?.trim()
+                    cleanNullableString(
+                        request.maidenName
+                    )
 
                 it[Accounts.gender] =
                     request.gender
 
                 it[Accounts.dateOfBirth] =
-                    parseDate(request.dateOfBirth)
+                    parseDate(
+                        request.dateOfBirth
+                    )
 
                 it[Accounts.maritalStatus] =
                     request.maritalStatus
@@ -642,96 +683,107 @@ object AccountRepository {
                  */
 
                 it[Accounts.academicQualificationId] =
-                    request.academicQualificationId?.let { id ->
-                        EntityID(
-                            id,
-                            AcademicQualifications
-                        )
-                    }
+                    request.academicQualificationId
+                        ?.let { academicQualificationId ->
+                            EntityID(
+                                academicQualificationId,
+                                AcademicQualifications
+                            )
+                        }
 
                 /*
-                 * Other table relationships
+                 * Organization relationships
                  */
 
                 it[Accounts.directorateId] =
-                    request.directorateId?.let { id ->
-                        EntityID(
-                            id,
-                            Departments
-                        )
-                    }
+                    request.directorateId
+                        ?.let { directorateId ->
+                            EntityID(
+                                directorateId,
+                                Departments
+                            )
+                        }
 
                 it[Accounts.categoryId] =
-                    request.categoryId?.let { id ->
-                        EntityID(
-                            id,
-                            StaffClasses
-                        )
-                    }
+                    request.categoryId
+                        ?.let { categoryId ->
+                            EntityID(
+                                categoryId,
+                                StaffClasses
+                            )
+                        }
 
                 it[Accounts.districtId] =
-                    request.districtId?.let { id ->
-                        EntityID(
-                            id,
-                            Districts
-                        )
-                    }
+                    request.districtId
+                        ?.let { districtId ->
+                            EntityID(
+                                districtId,
+                                Districts
+                            )
+                        }
 
                 it[Accounts.regionId] =
-                    request.regionId?.let { id ->
-                        EntityID(
-                            id,
-                            Regions
-                        )
-                    }
+                    request.regionId
+                        ?.let { regionId ->
+                            EntityID(
+                                regionId,
+                                Regions
+                            )
+                        }
 
                 it[Accounts.currentGradeId] =
-                    request.currentGradeId?.let { id ->
-                        EntityID(
-                            id,
-                            CurrentGrades
-                        )
-                    }
+                    request.currentGradeId
+                        ?.let { currentGradeId ->
+                            EntityID(
+                                currentGradeId,
+                                CurrentGrades
+                            )
+                        }
 
                 it[Accounts.nextGradeId] =
-                    request.nextGradeId?.let { id ->
-                        EntityID(
-                            id,
-                            NextGrades
-                        )
-                    }
+                    request.nextGradeId
+                        ?.let { nextGradeId ->
+                            EntityID(
+                                nextGradeId,
+                                NextGrades
+                            )
+                        }
 
                 it[Accounts.changeOfGradeId] =
-                    request.changeOfGradeId?.let { id ->
-                        EntityID(
-                            id,
-                            ChangeOfGrades
-                        )
-                    }
+                    request.changeOfGradeId
+                        ?.let { changeOfGradeId ->
+                            EntityID(
+                                changeOfGradeId,
+                                ChangeOfGrades
+                            )
+                        }
 
                 it[Accounts.managementUnitCostCentreId] =
-                    request.managementUnitCostCentreId?.let { id ->
-                        EntityID(
-                            id,
-                            ManagementUnits
-                        )
-                    }
+                    request.managementUnitCostCentreId
+                        ?.let { managementUnitId ->
+                            EntityID(
+                                managementUnitId,
+                                ManagementUnits
+                            )
+                        }
 
                 it[Accounts.titleId] =
-                    request.titleId?.let { id ->
-                        EntityID(
-                            id,
-                            Titles
-                        )
-                    }
+                    request.titleId
+                        ?.let { titleId ->
+                            EntityID(
+                                titleId,
+                                Titles
+                            )
+                        }
 
                 it[Accounts.onLeaveTypeId] =
-                    request.onLeaveTypeId?.let { id ->
-                        EntityID(
-                            id,
-                            OnLeaveTypes
-                        )
-                    }
+                    request.onLeaveTypeId
+                        ?.let { onLeaveTypeId ->
+                            EntityID(
+                                onLeaveTypeId,
+                                OnLeaveTypes
+                            )
+                        }
 
                 /*
                  * Employment and professional information
@@ -741,13 +793,19 @@ object AccountRepository {
                     request.professional
 
                 it[Accounts.professionalQualification] =
-                    request.professionalQualification?.trim()
+                    cleanNullableString(
+                        request.professionalQualification
+                    )
 
                 it[Accounts.staffCategory] =
                     request.staffCategory
 
                 it[Accounts.fulltimeContractStaff] =
                     request.fulltimeContractStaff
+
+                /*
+                 * Salary grade information
+                 */
 
                 it[Accounts.currentSalaryLevel] =
                     request.currentSalaryLevel
@@ -757,6 +815,10 @@ object AccountRepository {
 
                 it[Accounts.nextSalaryLevel] =
                     request.nextSalaryLevel
+
+                /*
+                 * Employment dates
+                 */
 
                 it[Accounts.dateOfAssumptionOfDuty] =
                     parseDate(
@@ -824,41 +886,58 @@ object AccountRepository {
                     )
 
                 it[Accounts.selfAssessmentDescription] =
-                    request.selfAssessmentDescription
-                        ?.trim()
+                    cleanNullableString(
+                        request.selfAssessmentDescription
+                    )
 
                 /*
                  * Contact and identification information
+                 *
+                 * Blank unique values must be stored as null,
+                 * not as empty strings.
                  */
 
                 it[Accounts.phoneNumber] =
-                    request.phoneNumber?.trim()
+                    cleanNullableString(
+                        request.phoneNumber
+                    )
 
                 it[Accounts.ghanaCardNumber] =
-                    request.ghanaCardNumber?.trim()
+                    cleanNullableString(
+                        request.ghanaCardNumber
+                    )
 
                 it[Accounts.socialSecurityNumber] =
-                    request.socialSecurityNumber?.trim()
+                    cleanNullableString(
+                        request.socialSecurityNumber
+                    )
 
                 it[Accounts.nationalHealthInsuranceNumber] =
-                    request.nationalHealthInsuranceNumber
-                        ?.trim()
+                    cleanNullableString(
+                        request.nationalHealthInsuranceNumber
+                    )
 
                 /*
                  * Banking information
                  */
 
                 it[Accounts.bankName] =
-                    request.bankName?.trim()
+                    cleanNullableString(
+                        request.bankName
+                    )
 
                 it[Accounts.bankAccountNumber] =
-                    request.bankAccountNumber?.trim()
+                    cleanNullableString(
+                        request.bankAccountNumber
+                    )
 
                 it[Accounts.bankAccountBranch] =
-                    request.bankAccountBranch?.trim()
+                    cleanNullableString(
+                        request.bankAccountBranch
+                    )
 
                 /*
-                 * Payroll, leave and accommodation
+                 * Payroll, leave, and accommodation
                  */
 
                 it[Accounts.payrollStatus] =
@@ -871,22 +950,32 @@ object AccountRepository {
                     request.accommodationStatus
 
                 it[Accounts.supervisorName] =
-                    request.supervisorName?.trim()
+                    cleanNullableString(
+                        request.supervisorName
+                    )
 
                 /*
                  * Profile picture
                  */
 
                 it[Accounts.profilePictureUrl] =
-                    request.profilePictureUrl?.trim()
+                    cleanNullableString(
+                        request.profilePictureUrl
+                    )
 
                 it[Accounts.profilePicturePublicId] =
-                    request.profilePicturePublicId
-                        ?.trim()
+                    cleanNullableString(
+                        request.profilePicturePublicId
+                    )
             }
             .value
-
     }
+
+
+
+
+
+
 
     suspend fun getById(
         id: Int
@@ -1002,6 +1091,18 @@ object AccountRepository {
                 )
             }
     }
+
+
+    private fun cleanNullableString(
+        value: String?
+    ): String? {
+        return value
+            ?.trim()
+            ?.takeIf {
+                it.isNotBlank()
+            }
+    }
+
 
     private fun parseDate(
         value: String?

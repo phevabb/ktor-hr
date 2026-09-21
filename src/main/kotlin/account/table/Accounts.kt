@@ -33,14 +33,6 @@ import org.jetbrains.exposed.v1.javatime.datetime
 object Accounts : IntIdTable("accounts") {
 
 
-
-
-    /*
-     * Login and authentication
-     *
-     *
-     */
-
     val academicQualificationId = reference(
         name = "academic_qualification_id",
         foreign = AcademicQualifications,

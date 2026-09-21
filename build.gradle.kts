@@ -35,6 +35,8 @@ dependencies {
     implementation(libs.logback.classic)
     implementation("org.jetbrains.exposed:exposed-java-time:1.3.1")
     implementation("at.favre.lib:bcrypt:0.10.2")
+    implementation("com.cloudinary:cloudinary-http5:2.4.0")
+
 
 
     implementation("org.postgresql:r2dbc-postgresql:1.0.7.RELEASE")

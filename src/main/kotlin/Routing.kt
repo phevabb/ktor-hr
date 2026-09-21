@@ -11,6 +11,9 @@ fun Application.configureRouting() {
         get("/") {
             call.respondText("Hello, World!")
         }
+
+
+
         authenticate("myauth1") {
             get("/protected/route/basic") {
                 val principal = call.principal<UserIdPrincipal>()!!

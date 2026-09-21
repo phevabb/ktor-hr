@@ -157,6 +157,8 @@ fun Route.accountRoutes() {
      * Update account
      */
 
+
+
     put("/{id}") {
 
         val id = call.parameters["id"]?.toIntOrNull()
@@ -183,15 +185,45 @@ fun Route.accountRoutes() {
         }
 
         val result = dbQuery {
+            AccountRepository.getById(id)
+                ?: return@dbQuery AccountOperationResult.NotFound
 
-            val existingAccount =
-                AccountRepository.getById(id)
-                    ?: return@dbQuery AccountOperationResult.NotFound
+            val normalizedUserId =
+                request.userId.trim()
+
+            if (
+                AccountRepository.userIdExists(
+                    userId = normalizedUserId,
+                    excludeAccountId = id
+                )
+            ) {
+                return@dbQuery AccountOperationResult.UserIdExists
+            }
+
+            val normalizedPhoneNumber =
+                request.phoneNumber
+                    ?.trim()
+                    ?.takeIf {
+                        it.isNotBlank()
+                    }
+
+            if (
+                normalizedPhoneNumber != null &&
+                AccountRepository.phoneNumberExists(
+                    phoneNumber = normalizedPhoneNumber,
+                    excludeAccountId = id
+                )
+            ) {
+                return@dbQuery AccountOperationResult.PhoneExists
+            }
 
             val updated =
                 AccountRepository.update(
                     id = id,
-                    request = request
+                    request = request.copy(
+                        userId = normalizedUserId,
+                        phoneNumber = normalizedPhoneNumber
+                    )
                 )
 
             if (!updated) {
@@ -249,6 +281,16 @@ fun Route.accountRoutes() {
             }
         }
     }
+
+
+
+
+
+
+
+
+
+
 
     /*
      * Delete account
