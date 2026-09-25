@@ -1,70 +1,90 @@
 package com.hr
 
-import io.ktor.server.application.*
-import com.auth0.jwt.JWT
-import com.auth0.jwt.algorithms.Algorithm
-import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.*
-import io.ktor.server.response.*
-import io.ktor.client.*
-import io.ktor.client.engine.apache.*
-import io.ktor.http.*
+import com.hr.auth.config.JwtConfig
+import com.hr.auth.models.AuthPrincipal
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.Application
+import io.ktor.server.auth.Authentication
+import io.ktor.server.auth.jwt.jwt
+import io.ktor.server.response.respond
+import io.ktor.server.application.install
 
 fun Application.configureSecurity() {
-    val jwtAudience = "jwt-audience"
-    val jwtDomain = "https://jwt-provider-domain/"
-    val jwtRealm = "ktor sample app"
-    val jwtSecret = "secret"
-    authentication {
-        jwt {
-            realm = jwtRealm
+    install(Authentication) {
+        jwt("auth-jwt") {
+            realm =
+                JwtConfig.realm
+
             verifier(
-                JWT
-                    .require(Algorithm.HMAC256(jwtSecret))
-                    .withAudience(jwtAudience)
-                    .withIssuer(jwtDomain)
-                    .build()
+                JwtConfig.verifier
             )
+
             validate { credential ->
-                if (credential.payload.audience.contains(jwtAudience)) JWTPrincipal(credential.payload) else null
-            }
-        }
-    }
-    authentication {
-        oauth("auth-oauth-google") {
-            urlProvider = { "http://localhost:8080/callback" }
-            providerLookup = {
-                OAuthServerSettings.OAuth2ServerSettings(
-                    name = "google",
-                    authorizeUrl = "https://accounts.google.com/o/oauth2/auth",
-                    accessTokenUrl = "https://accounts.google.com/o/oauth2/token",
-                    requestMethod = HttpMethod.Post,
-                    clientId = System.getenv("GOOGLE_CLIENT_ID"),
-                    clientSecret = System.getenv("GOOGLE_CLIENT_SECRET"),
-                    defaultScopes = listOf("https://www.googleapis.com/auth/userinfo.profile")
-                )
-            }
-            client = HttpClient(Apache)
-        }
-    }
-    authentication {
-        basic(name = "myauth1") {
-            realm = "Ktor Server"
-            validate { credentials ->
-                if (credentials.name == credentials.password) {
-                    UserIdPrincipal(credentials.name)
+                val accountId =
+                    credential.payload
+                        .getClaim("accountId")
+                        .asInt()
+
+                val userId =
+                    credential.payload
+                        .getClaim("userId")
+                        .asString()
+
+                val role =
+                    credential.payload
+                        .getClaim("role")
+                        .asString()
+
+                val tokenId =
+                    credential.payload.id
+
+                val tokenType =
+                    credential.payload
+                        .getClaim("tokenType")
+                        .asString()
+
+                val validAudience =
+                    credential.payload
+                        .audience
+                        .contains(
+                            JwtConfig.audience
+                        )
+
+                if (
+                    accountId != null &&
+                    !role.isNullOrBlank() &&
+                    !tokenId.isNullOrBlank() &&
+                    tokenType == "access" &&
+                    validAudience
+                ) {
+                    AuthPrincipal(
+                        accountId =
+                            accountId,
+                        userId =
+                            userId,
+                        role =
+                            role,
+                        tokenId =
+                            tokenId
+                    )
                 } else {
                     null
                 }
             }
-        }
 
-        form(name = "myauth2") {
-            userParamName = "user"
-            passwordParamName = "password"
-            challenge {
-                /**/
+            challenge { _, _ ->
+                call.respond(
+                    HttpStatusCode.Unauthorized,
+                    mapOf(
+                        "detail" to
+                                "Authentication credentials are invalid or expired."
+                    )
+                )
             }
         }
     }
+
+    println(
+        "JWT authentication configured: auth-jwt"
+    )
 }

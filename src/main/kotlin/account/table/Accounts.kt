@@ -146,6 +146,8 @@ object Accounts : IntIdTable("accounts") {
         klass = Gender::class
     ).nullable()
 
+
+
     val atPostOnLeave = enumerationByName(
         name = "at_post_on_leave",
         length = 50,
@@ -353,6 +355,9 @@ object Accounts : IntIdTable("accounts") {
         "supervisor_name",
         100
     ).nullable()
+
+    val email = varchar("email", 30)
+        .nullable()
 
     /*
      * Profile picture

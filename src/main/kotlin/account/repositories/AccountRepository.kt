@@ -248,6 +248,8 @@ object AccountRepository {
             supervisorName =
                 row[Accounts.supervisorName],
 
+            email = row[Accounts.email],
+
             profilePictureUrl =
                 row[Accounts.profilePictureUrl],
 
@@ -567,6 +569,9 @@ object AccountRepository {
 
             it[Accounts.supervisorName] =
                 request.supervisorName?.trim()
+
+            it[Accounts.email] =
+                request.email?.trim()
 
             it[Accounts.profilePictureUrl] =
                 request.profilePictureUrl?.trim()
@@ -952,6 +957,11 @@ object AccountRepository {
                 it[Accounts.supervisorName] =
                     cleanNullableString(
                         request.supervisorName
+                    )
+
+                it[Accounts.email] =
+                    cleanNullableString(
+                        request.email
                     )
 
                 /*

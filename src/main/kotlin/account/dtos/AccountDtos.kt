@@ -68,6 +68,8 @@ data class AccountCreateRequest(
     val accommodationStatus: AccommodationStatus? = null,
     val supervisorName: String? = null,
 
+    val email: String? = null,
+
     val profilePictureUrl: String? = null,
     val profilePicturePublicId: String? = null,
 
@@ -155,6 +157,8 @@ data class AccountResponse(
     val atPostOnLeave: AtPostOnLeave? = null,
     val accommodationStatus: AccommodationStatus? = null,
     val supervisorName: String? = null,
+    val email: String? = null,
+
 
     val profilePictureUrl: String? = null,
     val profilePicturePublicId: String? = null,

@@ -43,8 +43,30 @@ dependencies {
 
     implementation(libs.postgresql)
     testImplementation(kotlin("test"))
+    implementation(
+        "io.github.cdimascio:dotenv-kotlin:6.5.1"
+    )
     testImplementation(ktorLibs.server.testHost)
+
+
+    implementation(
+        "io.ktor:ktor-server-auth-jvm:3.5.2"
+    )
+
+    implementation(
+        "io.ktor:ktor-server-auth-jwt-jvm:3.5.2"
+    )
+
+    implementation(
+        "com.auth0:java-jwt:4.6.1"
+    )
+
+    implementation(
+        "org.mindrot:jbcrypt:0.4"
+    )
+
 }
+
 
 
 
