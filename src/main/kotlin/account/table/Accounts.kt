@@ -14,6 +14,7 @@ import com.hr.account.dtos.SalaryLevel
 import com.hr.account.dtos.SalaryPoint
 import com.hr.account.dtos.StaffCategory
 import com.hr.changeofgrade.tables.ChangeOfGrades
+import com.hr.classes.tables.Classes
 import com.hr.currentgrade.tables.CurrentGrades
 import com.hr.department.table.Departments
 import com.hr.districts.tables.Districts
@@ -21,7 +22,7 @@ import com.hr.region.tables.Regions
 import com.hr.managementUnits.tables.ManagementUnits
 import com.hr.nextgrade.tables.NextGrades
 import com.hr.onleavetype.table.OnLeaveTypes
-import com.hr.staffclass.table.StaffClasses
+
 import com.hr.title.table.Titles
 import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
@@ -70,11 +71,17 @@ object Accounts : IntIdTable("accounts") {
         onDelete = ReferenceOption.SET_NULL
     ).nullable()
 
-    val categoryId = reference(
-        name = "category_id",
-        foreign = StaffClasses,
-        onDelete = ReferenceOption.SET_NULL
-    ).nullable()
+
+    // this is staff class.. ie. admin class, executive class, info class, stool lands class
+
+    val categoryId =
+        reference(
+            name = "category_id",
+            foreign = Classes,
+            onDelete =
+                ReferenceOption.SET_NULL
+        )
+            .nullable()
 
     val districtId = reference(
         name = "district_id",
