@@ -12,6 +12,7 @@ import com.hr.currentgrade.currentGradeModule
 import com.hr.department.departmentModule
 import com.hr.districts.districtModule
 import com.hr.managementUnits.managementUnitModule
+import com.hr.manager.managerModule
 import com.hr.managerprofile.managerProfileModule
 import com.hr.media.mediaModule
 import com.hr.nextgrade.configureNextGradeModule
@@ -38,6 +39,7 @@ fun Application.module() {
     configureSecurity()
     configureStatusPages()
     configureRouting()
+
     regionModule()
     districtModule()
     departmentModule()
@@ -58,6 +60,7 @@ fun Application.module() {
     authModule()
     staffModule()
     adminModule()
+    managerModule()
 
 
 }

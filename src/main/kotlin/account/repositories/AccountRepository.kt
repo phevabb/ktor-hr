@@ -1,6 +1,19 @@
 package com.hr.account.repositories
 
+
+
+
+
 import com.hr.academicqualification.table.AcademicQualifications
+import com.hr.account.dtos.AccountAcademicQualificationResponse
+
+import com.hr.classes.tables.Classes
+
+import kotlinx.coroutines.flow.firstOrNull
+
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.r2dbc.selectAll
+
 import com.hr.account.dtos.AccountCreateRequest
 import com.hr.account.dtos.AccountResponse
 import com.hr.account.helpers.AccountComputedValues
@@ -16,6 +29,7 @@ import com.hr.onleavetype.table.OnLeaveTypes
 import com.hr.region.tables.Regions
 import com.hr.staffclass.table.StaffClasses
 import com.hr.title.table.Titles
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.singleOrNull
 import kotlinx.coroutines.flow.toList
@@ -33,9 +47,11 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 object AccountRepository {
-    private fun rowToAccountResponse(
+    suspend fun rowToAccountResponse(
         row: ResultRow
     ): AccountResponse {
+        val accountId =
+            row[Accounts.id].value
 
         val userId =
             row[Accounts.userId]
@@ -61,6 +77,52 @@ object AccountRepository {
         val retirementAge =
             row[Accounts.standardRetirementAge]
 
+        val academicQualificationId =
+            row[Accounts.academicQualificationId]
+                ?.value
+
+        val directorateId =
+            row[Accounts.directorateId]
+                ?.value
+
+        val categoryId =
+            row[Accounts.categoryId]
+                ?.value
+
+        val districtId =
+            row[Accounts.districtId]
+                ?.value
+
+        val regionId =
+            row[Accounts.regionId]
+                ?.value
+
+        val currentGradeId =
+            row[Accounts.currentGradeId]
+                ?.value
+
+        val nextGradeId =
+            row[Accounts.nextGradeId]
+                ?.value
+
+        val changeOfGradeId =
+            row[Accounts.changeOfGradeId]
+                ?.value
+
+        val managementUnitCostCentreId =
+            row[
+                Accounts.managementUnitCostCentreId
+            ]
+                ?.value
+
+        val titleId =
+            row[Accounts.titleId]
+                ?.value
+
+        val onLeaveTypeId =
+            row[Accounts.onLeaveTypeId]
+                ?.value
+
         val fullName =
             AccountComputedValues.fullName(
                 firstName = firstName,
@@ -68,210 +130,614 @@ object AccountRepository {
                 lastName = lastName
             )
 
-        return AccountResponse(
-            id = row[Accounts.id].value,
-            userId = userId,
-            role = row[Accounts.role],
+        val displayName =
+            AccountComputedValues.displayName(
+                fullName = fullName,
+                userId = userId
+            )
 
-            firstName = firstName,
-            middleName = middleName,
-            lastName = lastName,
-            maidenName = row[Accounts.maidenName],
+        val response =
+            AccountResponse(
+                id =
+                    accountId,
 
-            fullName = fullName,
+                userId =
+                    userId,
 
-            displayName =
-                AccountComputedValues.displayName(
-                    fullName = fullName,
-                    userId = userId
-                ),
+                firstName =
+                    firstName,
 
-            gender = row[Accounts.gender],
-            maritalStatus = row[Accounts.maritalStatus],
+                middleName =
+                    middleName,
 
-            dateOfBirth = dateOfBirth?.toString(),
+                lastName =
+                    lastName,
 
-            age =
-                AccountComputedValues.age(
-                    dateOfBirth
-                ),
+                maidenName =
+                    row[Accounts.maidenName],
 
-            standardRetirementAge =
-                retirementAge,
+                fullName =
+                    fullName,
 
-            dateOfRetirement =
-                AccountComputedValues.dateOfRetirement(
-                    dateOfBirth = dateOfBirth,
-                    standardRetirementAge = retirementAge
-                )?.toString(),
+                displayName =
+                    displayName,
 
-            academicQualificationId =
-                row[Accounts.academicQualificationId]?.value,
+                role =
+                    row[Accounts.role]
+                        ?.name,
 
-            directorateId =
-                row[Accounts.directorateId]?.value,
+                gender =
+                    row[Accounts.gender]
+                        ?.name,
 
-            categoryId =
-                row[Accounts.categoryId]?.value,
+                maritalStatus =
+                    row[Accounts.maritalStatus]
+                        ?.name,
 
-            districtId =
-                row[Accounts.districtId]?.value,
+                professional =
+                    row[Accounts.professional]
+                        ?.name,
 
-            regionId =
-                row[Accounts.regionId]?.value,
+                professionalQualification =
+                    row[
+                        Accounts.professionalQualification
+                    ],
 
-            currentGradeId =
-                row[Accounts.currentGradeId]?.value,
+                staffCategory =
+                    row[Accounts.staffCategory]
+                        ?.name,
 
-            nextGradeId =
-                row[Accounts.nextGradeId]?.value,
+                fulltimeContractStaff =
+                    row[
+                        Accounts.fulltimeContractStaff
+                    ]
+                        ?.name,
 
-            changeOfGradeId =
-                row[Accounts.changeOfGradeId]?.value,
+                isActive =
+                    row[Accounts.isActive],
 
-            managementUnitCostCentreId =
-                row[Accounts.managementUnitCostCentreId]?.value,
+                isStaff =
+                    row[Accounts.isStaff],
 
-            titleId =
-                row[Accounts.titleId]?.value,
+                isSuperuser =
+                    row[Accounts.isSuperuser],
 
-            onLeaveTypeId =
-                row[Accounts.onLeaveTypeId]?.value,
+                email =
+                    row[Accounts.email],
 
-            professional =
-                row[Accounts.professional],
+                phoneNumber =
+                    row[Accounts.phoneNumber],
 
-            professionalQualification =
-                row[Accounts.professionalQualification],
+                profilePictureUrl =
+                    row[Accounts.profilePictureUrl],
 
-            staffCategory =
-                row[Accounts.staffCategory],
+                profilePicturePublicId =
+                    row[
+                        Accounts.profilePicturePublicId
+                    ],
 
-            fulltimeContractStaff =
-                row[Accounts.fulltimeContractStaff],
+                ghanaCardNumber =
+                    row[Accounts.ghanaCardNumber],
 
-            currentSalaryLevel =
-                row[Accounts.currentSalaryLevel],
+                socialSecurityNumber =
+                    row[
+                        Accounts.socialSecurityNumber
+                    ],
 
-            currentSalaryPoint =
-                row[Accounts.currentSalaryPoint],
+                nationalHealthInsuranceNumber =
+                    row[
+                        Accounts
+                            .nationalHealthInsuranceNumber
+                    ],
 
-            nextSalaryLevel =
-                row[Accounts.nextSalaryLevel],
+                dateOfBirth =
+                    dateOfBirth?.toString(),
 
-            dateOfAssumptionOfDuty =
-                row[Accounts.dateOfAssumptionOfDuty]?.toString(),
+                age =
+                    AccountComputedValues.age(
+                        dateOfBirth
+                    ),
 
-            substantiveDate =
-                row[Accounts.substantiveDate]?.toString(),
+                standardRetirementAge =
+                    retirementAge,
 
-            nationalEffectiveDate =
-                row[Accounts.nationalEffectiveDate]?.toString(),
+                dateOfRetirement =
+                    AccountComputedValues
+                        .dateOfRetirement(
+                            dateOfBirth =
+                                dateOfBirth,
 
-            dateOfLastPromotion =
-                dateOfLastPromotion?.toString(),
+                            standardRetirementAge =
+                                retirementAge
+                        )
+                        ?.toString(),
 
-            yearsOnCurrentGrade =
-                AccountComputedValues.yearsOnCurrentGrade(
+                dateOfAssumptionOfDuty =
+                    row[
+                        Accounts.dateOfAssumptionOfDuty
+                    ]
+                        ?.toString(),
+
+                substantiveDate =
+                    row[Accounts.substantiveDate]
+                        ?.toString(),
+
+                nationalEffectiveDate =
+                    row[
+                        Accounts.nationalEffectiveDate
+                    ]
+                        ?.toString(),
+
+                dateOfLastPromotion =
                     dateOfLastPromotion
-                ),
+                        ?.toString(),
 
-            dateOfFirstAppointment =
-                dateOfFirstAppointment?.toString(),
-
-            numberOfYearsInService =
-                AccountComputedValues.numberOfYearsInService(
+                dateOfFirstAppointment =
                     dateOfFirstAppointment
-                ),
+                        ?.toString(),
 
-            singleSpineMonthlySalary =
-                row[Accounts.singleSpineMonthlySalary]
-                    ?.toPlainString(),
+                yearsOnCurrentGrade =
+                    AccountComputedValues
+                        .yearsOnCurrentGrade(
+                            dateOfLastPromotion
+                        ),
 
-            monthlyGrossPay =
-                row[Accounts.monthlyGrossPay]
-                    ?.toPlainString(),
+                numberOfYearsInService =
+                    AccountComputedValues
+                        .numberOfYearsInService(
+                            dateOfFirstAppointment
+                        ),
 
-            annualSalary =
-                row[Accounts.annualSalary]
-                    ?.toPlainString(),
+                currentSalaryPoint =
+                    row[
+                        Accounts.currentSalaryPoint
+                    ]
+                        ?.name,
 
-            numberOfFocusAreas =
-                row[Accounts.numberOfFocusAreas],
+                currentSalaryLevel =
+                    row[
+                        Accounts.currentSalaryLevel
+                    ]
+                        ?.name,
 
-            numberOfTargets =
-                row[Accounts.numberOfTargets],
+                nextSalaryLevel =
+                    row[Accounts.nextSalaryLevel]
+                        ?.name,
 
-            numberOfTargetsMet =
-                row[Accounts.numberOfTargetsMet],
+                singleSpineMonthlySalary =
+                    row[
+                        Accounts.singleSpineMonthlySalary
+                    ]
+                        ?.toPlainString(),
 
-            numberOfTargetsNotMet =
-                row[Accounts.numberOfTargetsNotMet],
+                monthlyGrossPay =
+                    row[Accounts.monthlyGrossPay]
+                        ?.toPlainString(),
 
-            overallAssessmentScore =
-                row[Accounts.overallAssessmentScore]
-                    ?.toPlainString(),
+                annualSalary =
+                    row[Accounts.annualSalary]
+                        ?.toPlainString(),
 
-            selfAssessmentDescription =
-                row[Accounts.selfAssessmentDescription],
+                numberOfFocusAreas =
+                    row[
+                        Accounts.numberOfFocusAreas
+                    ],
 
-            phoneNumber =
-                row[Accounts.phoneNumber],
+                numberOfTargets =
+                    row[Accounts.numberOfTargets],
 
-            ghanaCardNumber =
-                row[Accounts.ghanaCardNumber],
+                numberOfTargetsMet =
+                    row[
+                        Accounts.numberOfTargetsMet
+                    ],
 
-            socialSecurityNumber =
-                row[Accounts.socialSecurityNumber],
+                numberOfTargetsNotMet =
+                    row[
+                        Accounts.numberOfTargetsNotMet
+                    ],
 
-            nationalHealthInsuranceNumber =
-                row[Accounts.nationalHealthInsuranceNumber],
+                overallAssessmentScore =
+                    row[
+                        Accounts.overallAssessmentScore
+                    ]
+                        ?.toPlainString(),
 
-            bankName =
-                row[Accounts.bankName],
+                selfAssessmentDescription =
+                    row[
+                        Accounts
+                            .selfAssessmentDescription
+                    ],
 
-            bankAccountNumber =
-                row[Accounts.bankAccountNumber],
+                bankName =
+                    row[Accounts.bankName],
 
-            bankAccountBranch =
-                row[Accounts.bankAccountBranch],
+                bankAccountNumber =
+                    row[
+                        Accounts.bankAccountNumber
+                    ],
 
-            payrollStatus =
-                row[Accounts.payrollStatus],
+                bankAccountBranch =
+                    row[
+                        Accounts.bankAccountBranch
+                    ],
 
-            atPostOnLeave =
-                row[Accounts.atPostOnLeave],
+                payrollStatus =
+                    row[Accounts.payrollStatus]
+                        ?.name,
 
-            accommodationStatus =
-                row[Accounts.accommodationStatus],
+                atPostOnLeave =
+                    row[Accounts.atPostOnLeave]
+                        ?.name,
 
-            supervisorName =
-                row[Accounts.supervisorName],
+                accommodationStatus =
+                    row[
+                        Accounts.accommodationStatus
+                    ]
+                        ?.name,
 
-            email = row[Accounts.email],
+                supervisorName =
+                    row[Accounts.supervisorName],
 
-            profilePictureUrl =
-                row[Accounts.profilePictureUrl],
+                academicQualificationId =
+                    academicQualificationId,
 
-            profilePicturePublicId =
-                row[Accounts.profilePicturePublicId],
+                academicQualification =
+                    findAcademicQualification(
+                        academicQualificationId
+                    ),
 
-            isActive =
-                row[Accounts.isActive],
+                directorateId =
+                    directorateId,
 
-            isStaff =
-                row[Accounts.isStaff],
+                directorateName =
+                    findDirectorateName(
+                        directorateId
+                    ),
 
-            isSuperuser =
-                row[Accounts.isSuperuser],
+                categoryId =
+                    categoryId,
 
-            dateJoined =
-                row[Accounts.dateJoined].toString(),
+                categoryName =
+                    findCategoryName(
+                        categoryId
+                    ),
 
-            lastLogin =
-                row[Accounts.lastLogin]?.toString()
+                districtId =
+                    districtId,
+
+                districtName =
+                    findDistrictName(
+                        districtId
+                    ),
+
+                regionId =
+                    regionId,
+
+                regionName =
+                    findRegionName(
+                        regionId
+                    ),
+
+                currentGradeId =
+                    currentGradeId,
+
+                currentGradeName =
+                    findCurrentGradeName(
+                        currentGradeId
+                    ),
+
+                nextGradeId =
+                    nextGradeId,
+
+                nextGradeName =
+                    findNextGradeName(
+                        nextGradeId
+                    ),
+
+                changeOfGradeId =
+                    changeOfGradeId,
+
+                changeOfGradeName =
+                    findChangeOfGradeName(
+                        changeOfGradeId
+                    ),
+
+                managementUnitCostCentreId =
+                    managementUnitCostCentreId,
+
+                managementUnitCostCentreName =
+                    findManagementUnitName(
+                        managementUnitCostCentreId
+                    ),
+
+                titleId =
+                    titleId,
+
+                titleName =
+                    findTitleName(
+                        titleId
+                    ),
+
+                onLeaveTypeId =
+                    onLeaveTypeId,
+
+                onLeaveTypeName =
+                    findOnLeaveTypeName(
+                        onLeaveTypeId
+                    ),
+
+                dateJoined =
+                    row[Accounts.dateJoined]
+                        .toString(),
+
+                lastLogin =
+                    row[Accounts.lastLogin]
+                        ?.toString()
+            )
+
+        println(
+            "Account response created: " +
+                    "id=${response.id}, " +
+                    "userId=${response.userId}, " +
+                    "fullName=${response.fullName}, " +
+                    "role=${response.role}, " +
+                    "region=${response.regionName}, " +
+                    "district=${response.districtName}, " +
+                    "directorate=${response.directorateName}, " +
+                    "category=${response.categoryName}, " +
+                    "currentGrade=${response.currentGradeName}, " +
+                    "nextGrade=${response.nextGradeName}, " +
+                    "managementUnit=${response.managementUnitCostCentreName}, " +
+                    "academicQualification=${response.academicQualification?.name}"
+        )
+
+        return response
+    }
+
+    private suspend fun findAcademicQualification(
+        academicQualificationId: Int?
+    ): AccountAcademicQualificationResponse? {
+        if (academicQualificationId == null) {
+            return null
+        }
+
+        val row =
+            AcademicQualifications
+                .selectAll()
+                .where {
+                    AcademicQualifications.id eq
+                            academicQualificationId
+                }
+                .firstOrNull()
+                ?: return null
+
+        return AccountAcademicQualificationResponse(
+            id =
+                row[
+                    AcademicQualifications.id
+                ].value,
+
+            name =
+                row[
+                    AcademicQualifications.name
+                ]
         )
     }
+
+    private suspend fun findDirectorateName(
+        directorateId: Int?
+    ): String? {
+        if (directorateId == null) {
+            return null
+        }
+
+        return Departments
+            .selectAll()
+            .where {
+                Departments.id eq
+                        directorateId
+            }
+            .firstOrNull()
+            ?.get(
+                Departments.departmentName
+            )
+    }
+
+
+    private suspend fun findCategoryName(
+        categoryId: Int?
+    ): String? {
+        if (categoryId == null) {
+            return null
+        }
+
+        return Classes
+            .selectAll()
+            .where {
+                Classes.id eq
+                        categoryId
+            }
+            .firstOrNull()
+            ?.get(
+                Classes.classesName
+            )
+    }
+
+    private suspend fun findDistrictName(
+        districtId: Int?
+    ): String? {
+        if (districtId == null) {
+            return null
+        }
+
+        return Districts
+            .selectAll()
+            .where {
+                Districts.id eq
+                        districtId
+            }
+            .firstOrNull()
+            ?.get(
+                Districts.district
+            )
+    }
+
+    private suspend fun findRegionName(
+        regionId: Int?
+    ): String? {
+        if (regionId == null) {
+            return null
+        }
+
+        return Regions
+            .selectAll()
+            .where {
+                Regions.id eq
+                        regionId
+            }
+            .firstOrNull()
+            ?.get(
+                Regions.region
+            )
+    }
+
+
+    private suspend fun findCurrentGradeName(
+        currentGradeId: Int?
+    ): String? {
+        if (currentGradeId == null) {
+            return null
+        }
+
+        return CurrentGrades
+            .selectAll()
+            .where {
+                CurrentGrades.id eq
+                        currentGradeId
+            }
+            .firstOrNull()
+            ?.get(
+                CurrentGrades.currentGrade
+            )
+    }
+
+
+
+    private suspend fun findNextGradeName(
+        nextGradeId: Int?
+    ): String? {
+        if (nextGradeId == null) {
+            return null
+        }
+
+        return NextGrades
+            .selectAll()
+            .where {
+                NextGrades.id eq
+                        nextGradeId
+            }
+            .firstOrNull()
+            ?.get(
+                NextGrades.nextGrade
+            )
+    }
+
+
+    private suspend fun findChangeOfGradeName(
+        changeOfGradeId: Int?
+    ): String? {
+        if (changeOfGradeId == null) {
+            return null
+        }
+
+        return ChangeOfGrades
+            .selectAll()
+            .where {
+                ChangeOfGrades.id eq
+                        changeOfGradeId
+            }
+            .firstOrNull()
+            ?.get(
+                ChangeOfGrades.grade
+            )
+    }
+
+
+
+    private suspend fun findManagementUnitName(
+        managementUnitId: Int?
+    ): String? {
+        if (managementUnitId == null) {
+            return null
+        }
+
+        return ManagementUnits
+            .selectAll()
+            .where {
+                ManagementUnits.id eq
+                        managementUnitId
+            }
+            .firstOrNull()
+            ?.get(
+                ManagementUnits.managementUnitName
+            )
+    }
+
+
+    private suspend fun findTitleName(
+        titleId: Int?
+    ): String? {
+        if (titleId == null) {
+            return null
+        }
+
+        return Titles
+            .selectAll()
+            .where {
+                Titles.id eq
+                        titleId
+            }
+            .firstOrNull()
+            ?.get(
+                Titles.title
+            )
+    }
+
+    private suspend fun findOnLeaveTypeName(
+        onLeaveTypeId: Int?
+    ): String? {
+        if (onLeaveTypeId == null) {
+            return null
+        }
+
+        return OnLeaveTypes
+            .selectAll()
+            .where {
+                OnLeaveTypes.id eq
+                        onLeaveTypeId
+            }
+            .firstOrNull()
+            ?.get(
+                OnLeaveTypes.name
+            )
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -990,118 +1456,54 @@ object AccountRepository {
     suspend fun getById(
         id: Int
     ): AccountResponse? {
-        return Accounts
-            .selectAll()
-            .where {
-                Accounts.id eq id
-            }
-            .singleOrNull()
-            ?.let { row ->
-                val firstName =
-                    row[Accounts.firstName]
+        println(
+            "Retrieving account details: accountId=$id"
+        )
 
-                val middleName =
-                    row[Accounts.middleName]
+        val row =
+            Accounts
+                .selectAll()
+                .where {
+                    Accounts.id eq id
+                }
+                .singleOrNull()
 
-                val lastName =
-                    row[Accounts.lastName]
+        if (row == null) {
+            println(
+                "Account not found: accountId=$id"
+            )
 
-                val userId =
-                    row[Accounts.userId]
+            return null
+        }
 
-                val dateOfBirth =
-                    row[Accounts.dateOfBirth]
+        val account =
+            rowToAccountResponse(row)
 
-                val dateOfLastPromotion =
-                    row[Accounts.dateOfLastPromotion]
+        println(
+            """
+        Account details retrieved:
+        Account ID: ${account.id}
+        User ID: ${account.userId}
+        Full name: ${account.fullName}
+        Role: ${account.role}
+        Active: ${account.isActive}
+        Superuser: ${account.isSuperuser}
+        Region: ${account.regionName ?: "Not specified"}
+        District: ${account.districtName ?: "Not specified"}
+        Directorate: ${account.directorateName ?: "Not specified"}
+        Class: ${account.categoryName ?: "Not specified"}
+        Current grade: ${account.currentGradeName ?: "Not specified"}
+        Next grade: ${account.nextGradeName ?: "Not specified"}
+        Change of grade: ${account.changeOfGradeName ?: "Not specified"}
+        Management unit: ${account.managementUnitCostCentreName ?: "Not specified"}
+        Academic qualification: ${account.academicQualification?.name ?: "Not specified"}
+        Title: ${account.titleName ?: "Not specified"}
+        Leave type: ${account.onLeaveTypeName ?: "Not specified"}
+        """.trimIndent()
+        )
 
-                val dateOfFirstAppointment =
-                    row[Accounts.dateOfFirstAppointment]
-
-                val retirementAge =
-                    row[Accounts.standardRetirementAge]
-
-                val fullName =
-                    AccountComputedValues.fullName(
-                        firstName = firstName,
-                        middleName = middleName,
-                        lastName = lastName
-                    )
-
-                AccountResponse(
-                    id = row[Accounts.id].value,
-                    userId = userId,
-                    role = row[Accounts.role],
-
-                    firstName = firstName,
-                    middleName = middleName,
-                    lastName = lastName,
-                    fullName = fullName,
-
-                    gender = row[Accounts.gender],
-                    dateOfBirth = dateOfBirth?.toString(),
-
-                    age = AccountComputedValues.age(
-                        dateOfBirth
-                    ),
-
-                    dateOfRetirement =
-                        AccountComputedValues
-                            .dateOfRetirement(
-                                dateOfBirth = dateOfBirth,
-                                standardRetirementAge =
-                                    retirementAge
-                            )
-                            ?.toString(),
-
-                    dateOfLastPromotion =
-                        dateOfLastPromotion?.toString(),
-
-                    yearsOnCurrentGrade =
-                        AccountComputedValues
-                            .yearsOnCurrentGrade(
-                                dateOfLastPromotion
-                            ),
-
-                    dateOfFirstAppointment =
-                        dateOfFirstAppointment?.toString(),
-
-                    numberOfYearsInService =
-                        AccountComputedValues
-                            .numberOfYearsInService(
-                                dateOfFirstAppointment
-                            ),
-
-                    phoneNumber =
-                        row[Accounts.phoneNumber],
-
-                    profilePictureUrl =
-                        row[Accounts.profilePictureUrl],
-
-                    standardRetirementAge =
-                        retirementAge,
-
-                    isActive =
-                        row[Accounts.isActive],
-
-                    isStaff =
-                        row[Accounts.isStaff],
-
-                    isSuperuser =
-                        row[Accounts.isSuperuser],
-
-                    dateJoined =
-                        row[Accounts.dateJoined].toString(),
-
-                    displayName =
-                        AccountComputedValues.displayName(
-                            fullName = fullName,
-                            userId = userId
-                        )
-                )
-            }
+        return account
     }
-
 
     private fun cleanNullableString(
         value: String?

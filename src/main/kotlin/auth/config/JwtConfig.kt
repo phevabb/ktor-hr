@@ -1,7 +1,5 @@
 package com.hr.auth.config
 
-
-
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
@@ -18,12 +16,12 @@ object JwtConfig {
             name = "JWT_ISSUER",
             defaultValue = "ktor-hr-api"
         )
+
     val audience: String =
         EnvironmentConfig.getOrDefault(
             name = "JWT_AUDIENCE",
             defaultValue = "ktor-hr-api"
         )
-
 
     val realm: String =
         EnvironmentConfig.getOrDefault(
@@ -36,25 +34,44 @@ object JwtConfig {
             "JWT_SECRET"
         )
 
-    private val accessTokenMinutes: Long =
+    /*
+     * The access token remains valid for 365 days
+     * by default.
+     *
+     * The system remains stateless. There is no
+     * server-side session.
+     */
+    private val accessTokenDays: Long =
         EnvironmentConfig.getOrDefault(
-            name = "JWT_ACCESS_TOKEN_MINUTES",
-            defaultValue = "60"
-        ).toLongOrNull() ?: 60L
+            name = "JWT_ACCESS_TOKEN_DAYS",
+            defaultValue = "365"
+        ).toLongOrNull()
+            ?.coerceAtLeast(1L)
+            ?: 365L
 
     private val passwordResetMinutes: Long =
         EnvironmentConfig.getOrDefault(
             name = "JWT_PASSWORD_RESET_MINUTES",
             defaultValue = "20"
-        ).toLongOrNull() ?: 20L
+        ).toLongOrNull()
+            ?.coerceAtLeast(1L)
+            ?: 20L
 
     private val algorithm: Algorithm =
-        Algorithm.HMAC256(secret)
+        Algorithm.HMAC256(
+            secret
+        )
 
     val verifier: JWTVerifier =
-        JWT.require(algorithm)
-            .withIssuer(issuer)
-            .withAudience(audience)
+        JWT.require(
+            algorithm
+        )
+            .withIssuer(
+                issuer
+            )
+            .withAudience(
+                audience
+            )
             .withClaim(
                 "tokenType",
                 "access"
@@ -71,8 +88,8 @@ object JwtConfig {
 
         val expiresAt =
             now.plus(
-                accessTokenMinutes,
-                ChronoUnit.MINUTES
+                accessTokenDays,
+                ChronoUnit.DAYS
             )
 
         val tokenId =
@@ -81,17 +98,27 @@ object JwtConfig {
 
         val token =
             JWT.create()
-                .withIssuer(issuer)
-                .withAudience(audience)
+                .withIssuer(
+                    issuer
+                )
+                .withAudience(
+                    audience
+                )
                 .withSubject(
                     accountId.toString()
                 )
-                .withJWTId(tokenId)
+                .withJWTId(
+                    tokenId
+                )
                 .withIssuedAt(
-                    Date.from(now)
+                    Date.from(
+                        now
+                    )
                 )
                 .withExpiresAt(
-                    Date.from(expiresAt)
+                    Date.from(
+                        expiresAt
+                    )
                 )
                 .withClaim(
                     "accountId",
@@ -109,7 +136,37 @@ object JwtConfig {
                     "tokenType",
                     "access"
                 )
-                .sign(algorithm)
+                .sign(
+                    algorithm
+                )
+
+        println(
+            "Access token generated"
+        )
+
+        println(
+            "Account ID: $accountId"
+        )
+
+        println(
+            "User ID: $userId"
+        )
+
+        println(
+            "Role: $role"
+        )
+
+        println(
+            "Token issued at: $now"
+        )
+
+        println(
+            "Token expires at: $expiresAt"
+        )
+
+        println(
+            "Token validity in days: $accessTokenDays"
+        )
 
         return GeneratedJwtToken(
             token = token,
@@ -137,17 +194,27 @@ object JwtConfig {
 
         val token =
             JWT.create()
-                .withIssuer(issuer)
-                .withAudience(audience)
+                .withIssuer(
+                    issuer
+                )
+                .withAudience(
+                    audience
+                )
                 .withSubject(
                     accountId.toString()
                 )
-                .withJWTId(tokenId)
+                .withJWTId(
+                    tokenId
+                )
                 .withIssuedAt(
-                    Date.from(now)
+                    Date.from(
+                        now
+                    )
                 )
                 .withExpiresAt(
-                    Date.from(expiresAt)
+                    Date.from(
+                        expiresAt
+                    )
                 )
                 .withClaim(
                     "accountId",
@@ -161,7 +228,25 @@ object JwtConfig {
                     "tokenType",
                     "password_reset"
                 )
-                .sign(algorithm)
+                .sign(
+                    algorithm
+                )
+
+        println(
+            "Password-reset token generated"
+        )
+
+        println(
+            "Account ID: $accountId"
+        )
+
+        println(
+            "Token issued at: $now"
+        )
+
+        println(
+            "Token expires at: $expiresAt"
+        )
 
         return GeneratedJwtToken(
             token = token,
@@ -173,20 +258,27 @@ object JwtConfig {
     fun verifyPasswordResetToken(
         token: String
     ) =
-        JWT.require(algorithm)
-            .withIssuer(issuer)
-            .withAudience(audience)
+        JWT.require(
+            algorithm
+        )
+            .withIssuer(
+                issuer
+            )
+            .withAudience(
+                audience
+            )
             .withClaim(
                 "tokenType",
                 "password_reset"
             )
             .build()
-            .verify(token)
-
-
+            .verify(
+                token
+            )
+}
 
 data class GeneratedJwtToken(
     val token: String,
     val tokenId: String,
     val expiresAt: Instant
-)}
+)
