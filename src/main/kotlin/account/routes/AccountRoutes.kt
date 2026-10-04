@@ -115,24 +115,7 @@ fun Route.accountRoutes() {
             "Authenticated role: ${principal.role}"
         )
 
-        if (
-            !principal.role.equals(
-                other = "Admin",
-                ignoreCase = true
-            )
-        ) {
-            println(
-                "Account creation denied because the authenticated role is not Admin"
-            )
 
-            return@post call.respond(
-                HttpStatusCode.Forbidden,
-                mapOf(
-                    "detail" to
-                            "Admin access is required."
-                )
-            )
-        }
 
         val rawRequestBody =
             try {

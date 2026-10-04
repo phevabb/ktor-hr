@@ -73,7 +73,7 @@ fun Route.userFieldsRoutes() {
 
                 UserFieldsResult.AccessDenied -> {
                     println(
-                        "User fields access denied: " +
+                        "User fields access denied:nnn " +
                                 "accountId=${principal.accountId}, " +
                                 "role=${principal.role}"
                     )

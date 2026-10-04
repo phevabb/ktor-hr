@@ -1,0 +1,48 @@
+package com.hr.manager.dtos
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class ManagerUserExcelResponse(
+    val id: Int,
+    val userId: String?,
+    val fullName: String?,
+    val firstName: String?,
+    val middleName: String?,
+    val lastName: String?,
+    val email: String?,
+    val phoneNumber: String?,
+    val role: String?,
+    val gender: String?,
+    val maritalStatus: String?,
+    val professional: String?,
+    val professionalQualification: String?,
+    val staffCategory: String?,
+    val fulltimeContractStaff: String?,
+    val dateOfBirth: String?,
+    val age: Int?,
+    val dateOfRetirement: String?,
+    val dateOfFirstAppointment: String?,
+    val numberOfYearsInService: Int?,
+    val dateOfLastPromotion: String?,
+    val yearsOnCurrentGrade: Int?,
+    val currentSalaryLevel: String?,
+    val currentSalaryPoint: String?,
+    val nextSalaryLevel: String?,
+    val academicQualification: String?,
+    val directorateName: String?,
+    val categoryName: String?,
+    val districtName: String?,
+    val regionName: String?,
+    val currentGradeName: String?,
+    val nextGradeName: String?,
+    val changeOfGradeName: String?,
+    val managementUnitCostCentreName: String?,
+    val titleName: String?,
+    val onLeaveTypeName: String?,
+    val payrollStatus: String?,
+    val accommodationStatus: String?,
+    val atPostOnLeave: String?,
+    val supervisorName: String?,
+    val isActive: Boolean
+)

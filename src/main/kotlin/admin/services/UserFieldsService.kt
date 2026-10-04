@@ -21,126 +21,352 @@ object UserFieldsService {
     suspend fun getUserFields(
         accountId: Int
     ): UserFieldsResult {
+        println(
+            "=================================================="
+        )
+
+        println(
+            "Manager user fields service started"
+        )
+
+        println(
+            "Authenticated account ID: $accountId"
+        )
+
         val account =
-            AuthRepository
-                .findAccountById(
-                    accountId
+            try {
+                AuthRepository
+                    .findAccountById(
+                        accountId
+                    )
+            } catch (exception: Exception) {
+                println(
+                    "Unable to retrieve authenticated account"
                 )
-                ?: return UserFieldsResult
-                    .AccountNotFound
+
+                println(
+                    "Account ID: $accountId"
+                )
+
+                println(
+                    "Error type: ${exception::class.simpleName}"
+                )
+
+                println(
+                    "Error message: ${exception.message}"
+                )
+
+                exception.cause?.let { cause ->
+                    println(
+                        "Cause type: ${cause::class.simpleName}"
+                    )
+
+                    println(
+                        "Cause message: ${cause.message}"
+                    )
+                }
+
+                println(
+                    "=================================================="
+                )
+
+                return UserFieldsResult
+                    .Failed
+            }
+                ?: run {
+                    println(
+                        "Authenticated Manager account was not found"
+                    )
+
+                    println(
+                        "Account ID: $accountId"
+                    )
+
+                    println(
+                        "=================================================="
+                    )
+
+                    return UserFieldsResult
+                        .AccountNotFound
+                }
+
+        println(
+            "Authenticated account found"
+        )
+
+        println(
+            "Account ID: ${account.id}"
+        )
+
+        println(
+            "User ID: ${account.userId}"
+        )
+
+        println(
+            "Role: ${account.role}"
+        )
+
+        println(
+            "Account active: ${account.isActive}"
+        )
 
         if (!account.isActive) {
+            println(
+                "Manager user fields access denied"
+            )
+
+            println(
+                "Reason: Account is inactive"
+            )
+
+            println(
+                "Account ID: ${account.id}"
+            )
+
+            println(
+                "=================================================="
+            )
+
             return UserFieldsResult
                 .AccountInactive
         }
 
-        val isAdmin =
+        val isManager =
             account.role.equals(
-                other = "Admin",
+                other = "Manager",
                 ignoreCase = true
             )
 
-        if (!isAdmin) {
+        println(
+            "Account has Manager role: $isManager"
+        )
+
+        if (!isManager) {
             println(
-                "User fields access denied: " +
-                        "accountId=${account.id}, " +
-                        "role=${account.role}"
+                "Manager user fields access denied"
+            )
+
+            println(
+                "Account ID: ${account.id}"
+            )
+
+            println(
+                "Current role: ${account.role}"
+            )
+
+            println(
+                "Required role: Manager"
+            )
+
+            println(
+                "=================================================="
             )
 
             return UserFieldsResult
                 .AccessDenied
         }
 
+        println(
+            "Manager user fields access granted"
+        )
+
+        println(
+            "Account ID: ${account.id}"
+        )
+
+        println(
+            "Role: ${account.role}"
+        )
+
         return try {
+            println(
+                "Retrieving academic qualifications"
+            )
+
             val academicQualifications =
                 UserFieldsRepository
                     .getAcademicQualifications()
+
+            println(
+                "Academic qualifications retrieved: ${academicQualifications.size}"
+            )
+
+            println(
+                "Retrieving departments"
+            )
 
             val departments =
                 UserFieldsRepository
                     .getDepartments()
 
+            println(
+                "Departments retrieved: ${departments.size}"
+            )
+
+            println(
+                "Retrieving staff classes"
+            )
+
             val classes =
                 UserFieldsRepository
                     .getClasses()
+
+            println(
+                "Staff classes retrieved: ${classes.size}"
+            )
+
+            println(
+                "Retrieving districts"
+            )
 
             val districts =
                 UserFieldsRepository
                     .getDistricts()
 
-            val regions =
-                UserFieldsRepository
-                    .getRegions()
+            println(
+                "Districts retrieved: ${districts.size}"
+            )
+
+            /*
+             * Regions are intentionally not retrieved.
+             *
+             * ManagerCreateUserService assigns the
+             * authenticated Manager's region automatically.
+             */
+
+            println(
+                "Retrieving current grades"
+            )
 
             val currentGrades =
                 UserFieldsRepository
                     .getCurrentGrades()
 
+            println(
+                "Current grades retrieved: ${currentGrades.size}"
+            )
+
+            println(
+                "Retrieving next grades"
+            )
+
             val nextGrades =
                 UserFieldsRepository
                     .getNextGrades()
+
+            println(
+                "Next grades retrieved: ${nextGrades.size}"
+            )
+
+            println(
+                "Retrieving change-of-grade options"
+            )
 
             val changeOfGrades =
                 UserFieldsRepository
                     .getChangeOfGrades()
 
+            println(
+                "Change-of-grade options retrieved: ${changeOfGrades.size}"
+            )
+
+            println(
+                "Retrieving management units"
+            )
+
             val managementUnits =
                 UserFieldsRepository
                     .getManagementUnits()
+
+            println(
+                "Management units retrieved: ${managementUnits.size}"
+            )
+
+            println(
+                "Retrieving titles"
+            )
 
             val titles =
                 UserFieldsRepository
                     .getTitles()
 
+            println(
+                "Titles retrieved: ${titles.size}"
+            )
+
+            println(
+                "Retrieving leave types"
+            )
+
             val leaveTypes =
                 UserFieldsRepository
                     .getLeaveTypes()
 
+            println(
+                "Leave types retrieved: ${leaveTypes.size}"
+            )
+
             val fields =
                 listOf(
                     textField(
-                        name = "userId",
-                        required = true
+                        name =
+                            "userId",
+
+                        required =
+                            true
                     ),
 
+                    /*
+                     * Role is intentionally excluded.
+                     *
+                     * ManagerCreateUserService forces:
+                     *
+                     * role = Role.Staff
+                     */
 
+                    textField(
+                        name =
+                            "firstName",
+
+                        required =
+                            true
+                    ),
+
+                    textField(
+                        name =
+                            "middleName"
+                    ),
+
+                    textField(
+                        name =
+                            "lastName",
+
+                        required =
+                            true
+                    ),
+
+                    textField(
+                        name =
+                            "maidenName"
+                    ),
+
+                    textField(
+                        name =
+                            "email",
+
+                        type =
+                            "EmailField"
+                    ),
+
+                    textField(
+                        name =
+                            "phoneNumber"
+                    ),
 
                     choiceField(
-                        name = "role",
-                        values =
-                            Role.entries.map {
-                                it.name
-                            },
-                        required = true
-                    ),
+                        name =
+                            "gender",
 
-                    textField(
-                        name = "firstName"
-                    ),
-
-                    textField(
-                        name = "middleName"
-                    ),
-
-                    textField(
-                        name = "lastName"
-                    ),
-
-                    textField(
-                        name = "maidenName"
-                    ),
-
-                    textField(
-                        name = "email",
-                        type = "EmailField"
-                    ),
-
-                    textField(
-                        name = "phoneNumber"
-                    ),
-
-                    choiceField(
-                        name = "gender",
                         values =
                             Gender.entries.map {
                                 it.name
@@ -148,7 +374,9 @@ object UserFieldsService {
                     ),
 
                     choiceField(
-                        name = "maritalStatus",
+                        name =
+                            "maritalStatus",
+
                         values =
                             MaritalStatus.entries.map {
                                 it.name
@@ -156,70 +384,102 @@ object UserFieldsService {
                     ),
 
                     dateField(
-                        name = "dateOfBirth"
+                        name =
+                            "dateOfBirth"
                     ),
 
                     foreignKeyField(
                         name =
                             "academicQualificationId",
+
                         items =
                             academicQualifications
                     ),
 
                     foreignKeyField(
-                        name = "directorateId",
-                        items = departments
+                        name =
+                            "directorateId",
+
+                        items =
+                            departments
                     ),
 
                     foreignKeyField(
-                        name = "categoryId",
-                        items = classes
+                        name =
+                            "categoryId",
+
+                        items =
+                            classes
                     ),
 
                     foreignKeyField(
-                        name = "districtId",
-                        items = districts
+                        name =
+                            "districtId",
+
+                        items =
+                            districts
+                    ),
+
+                    /*
+                     * regionId is intentionally excluded.
+                     *
+                     * ManagerCreateUserService assigns:
+                     *
+                     * regionId = managerRegionId
+                     */
+
+                    foreignKeyField(
+                        name =
+                            "currentGradeId",
+
+                        items =
+                            currentGrades
                     ),
 
                     foreignKeyField(
-                        name = "regionId",
-                        items = regions
+                        name =
+                            "nextGradeId",
+
+                        items =
+                            nextGrades
                     ),
 
                     foreignKeyField(
-                        name = "currentGradeId",
-                        items = currentGrades
-                    ),
+                        name =
+                            "changeOfGradeId",
 
-                    foreignKeyField(
-                        name = "nextGradeId",
-                        items = nextGrades
-                    ),
-
-                    foreignKeyField(
-                        name = "changeOfGradeId",
-                        items = changeOfGrades
+                        items =
+                            changeOfGrades
                     ),
 
                     foreignKeyField(
                         name =
                             "managementUnitCostCentreId",
+
                         items =
                             managementUnits
                     ),
 
                     foreignKeyField(
-                        name = "titleId",
-                        items = titles
+                        name =
+                            "titleId",
+
+                        items =
+                            titles
                     ),
 
                     foreignKeyField(
-                        name = "onLeaveTypeId",
-                        items = leaveTypes
+                        name =
+                            "onLeaveTypeId",
+
+                        items =
+                            leaveTypes
                     ),
 
                     choiceField(
-                        name = "professional",
+                        name =
+                            "professional",
+
                         values =
                             Professional.entries.map {
                                 it.name
@@ -232,7 +492,9 @@ object UserFieldsService {
                     ),
 
                     choiceField(
-                        name = "staffCategory",
+                        name =
+                            "staffCategory",
+
                         values =
                             StaffCategory.entries.map {
                                 it.name
@@ -242,6 +504,7 @@ object UserFieldsService {
                     choiceField(
                         name =
                             "fulltimeContractStaff",
+
                         values =
                             FulltimeContractStaff
                                 .entries
@@ -251,7 +514,9 @@ object UserFieldsService {
                     ),
 
                     choiceField(
-                        name = "currentSalaryLevel",
+                        name =
+                            "currentSalaryLevel",
+
                         values =
                             SalaryLevel.entries.map {
                                 it.name
@@ -259,7 +524,9 @@ object UserFieldsService {
                     ),
 
                     choiceField(
-                        name = "currentSalaryPoint",
+                        name =
+                            "currentSalaryPoint",
+
                         values =
                             SalaryPoint.entries.map {
                                 it.name
@@ -267,7 +534,9 @@ object UserFieldsService {
                     ),
 
                     choiceField(
-                        name = "nextSalaryLevel",
+                        name =
+                            "nextSalaryLevel",
+
                         values =
                             SalaryLevel.entries.map {
                                 it.name
@@ -280,7 +549,8 @@ object UserFieldsService {
                     ),
 
                     dateField(
-                        name = "substantiveDate"
+                        name =
+                            "substantiveDate"
                     ),
 
                     dateField(
@@ -304,23 +574,28 @@ object UserFieldsService {
                     ),
 
                     decimalField(
-                        name = "monthlyGrossPay"
+                        name =
+                            "monthlyGrossPay"
                     ),
 
                     decimalField(
-                        name = "annualSalary"
+                        name =
+                            "annualSalary"
                     ),
 
                     integerField(
-                        name = "numberOfFocusAreas"
+                        name =
+                            "numberOfFocusAreas"
                     ),
 
                     integerField(
-                        name = "numberOfTargets"
+                        name =
+                            "numberOfTargets"
                     ),
 
                     integerField(
-                        name = "numberOfTargetsMet"
+                        name =
+                            "numberOfTargetsMet"
                     ),
 
                     integerField(
@@ -336,11 +611,14 @@ object UserFieldsService {
                     textField(
                         name =
                             "selfAssessmentDescription",
-                        type = "TextField"
+
+                        type =
+                            "TextField"
                     ),
 
                     textField(
-                        name = "ghanaCardNumber"
+                        name =
+                            "ghanaCardNumber"
                     ),
 
                     textField(
@@ -354,19 +632,24 @@ object UserFieldsService {
                     ),
 
                     textField(
-                        name = "bankName"
+                        name =
+                            "bankName"
                     ),
 
                     textField(
-                        name = "bankAccountBranch"
+                        name =
+                            "bankAccountBranch"
                     ),
 
                     textField(
-                        name = "bankAccountNumber"
+                        name =
+                            "bankAccountNumber"
                     ),
 
                     choiceField(
-                        name = "payrollStatus",
+                        name =
+                            "payrollStatus",
+
                         values =
                             PayrollStatus.entries.map {
                                 it.name
@@ -374,7 +657,9 @@ object UserFieldsService {
                     ),
 
                     choiceField(
-                        name = "atPostOnLeave",
+                        name =
+                            "atPostOnLeave",
+
                         values =
                             AtPostOnLeave.entries.map {
                                 it.name
@@ -384,6 +669,7 @@ object UserFieldsService {
                     choiceField(
                         name =
                             "accommodationStatus",
+
                         values =
                             AccommodationStatus
                                 .entries
@@ -393,30 +679,131 @@ object UserFieldsService {
                     ),
 
                     textField(
-                        name = "supervisorName"
+                        name =
+                            "supervisorName"
                     )
                 )
 
             println(
-                "User field metadata retrieved: " +
-                        "accountId=${account.id}, " +
-                        "fieldCount=${fields.size}"
+                "Manager user field metadata retrieved successfully"
+            )
+
+            println(
+                "Account ID: ${account.id}"
+            )
+
+            println(
+                "User ID: ${account.userId}"
+            )
+
+            println(
+                "Role: ${account.role}"
+            )
+
+            println(
+                "Field count: ${fields.size}"
+            )
+
+            fields.forEachIndexed {
+                    index,
+                    field ->
+
+                println(
+                    "Field ${index + 1}: " +
+                            "name=${field.fieldName}, " +
+                            "type=${field.fieldType}, " +
+                            "required=${field.required}, " +
+                            "multiple=${field.multiple}"
+                )
+            }
+
+            println(
+                "Manager-controlled fields excluded:"
+            )
+
+            println(
+                "role"
+            )
+
+            println(
+                "regionId"
+            )
+
+            println(
+                "isActive"
+            )
+
+            println(
+                "isStaff"
+            )
+
+            println(
+                "isSuperuser"
+            )
+
+            println(
+                "password"
+            )
+
+            println(
+                "=================================================="
             )
 
             UserFieldsResult.Success(
-                fields = fields
+                fields =
+                    fields
             )
         } catch (exception: Exception) {
             println(
-                "Unable to retrieve user fields: " +
-                        "accountId=${account.id}, " +
-                        "errorType=${exception::class.simpleName}, " +
-                        "message=${exception.message}"
+                "Unable to retrieve Manager user fields"
+            )
+
+            println(
+                "Account ID: ${account.id}"
+            )
+
+            println(
+                "Error type: ${exception::class.simpleName}"
+            )
+
+            println(
+                "Error message: ${exception.message}"
+            )
+
+            var currentCause =
+                exception.cause
+
+            var causeLevel =
+                1
+
+            while (currentCause != null) {
+                println(
+                    "Cause $causeLevel type: ${currentCause::class.simpleName}"
+                )
+
+                println(
+                    "Cause $causeLevel message: ${currentCause.message}"
+                )
+
+                currentCause =
+                    currentCause.cause
+
+                causeLevel +=
+                    1
+            }
+
+            println(
+                "=================================================="
             )
 
             UserFieldsResult.Failed
         }
     }
+
+
+
+
+
 
     private fun textField(
         name: String,

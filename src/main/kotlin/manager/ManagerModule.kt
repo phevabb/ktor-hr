@@ -1,16 +1,22 @@
 package com.hr.manager
 
+import com.hr.manager.routes.managerAgeStatsRoutes
 import com.hr.manager.routes.managerClassStatsRoutes
 import com.hr.manager.routes.managerContractStatsRoutes
+import com.hr.manager.routes.managerCreateUserRoutes
 import com.hr.manager.routes.managerDashboardRoutes
 import com.hr.manager.routes.managerDirectorateStatsRoutes
 import com.hr.manager.routes.managerGenderStatsRoutes
 import com.hr.manager.routes.managerLeaveTypeStatsRoutes
 import com.hr.manager.routes.managerManagementStatsRoutes
 import com.hr.manager.routes.managerProfessionalStatsRoutes
+import com.hr.manager.routes.managerRegionStatsRoutes
+import com.hr.manager.routes.managerRemoveUserRoutes
 import com.hr.manager.routes.managerSalaryGradeStatsRoutes
 import com.hr.manager.routes.managerStaffCategoryStatsRoutes
 import com.hr.manager.routes.managerUserDetailsRoutes
+import com.hr.manager.routes.managerUserFieldsRoutes
+import com.hr.manager.routes.managerUsersExcelRoutes
 import com.hr.manager.routes.managerUsersRoutes
 import io.ktor.server.application.Application
 import io.ktor.server.auth.authenticate
@@ -33,6 +39,13 @@ fun Application.managerModule() {
                 managerSalaryGradeStatsRoutes()
                 managerStaffCategoryStatsRoutes()
                 managerGenderStatsRoutes()
+                managerAgeStatsRoutes()
+                managerRegionStatsRoutes()
+                managerUsersExcelRoutes()
+                managerUserFieldsRoutes()
+                managerCreateUserRoutes()
+                managerRemoveUserRoutes()
+
 
             }
         }
