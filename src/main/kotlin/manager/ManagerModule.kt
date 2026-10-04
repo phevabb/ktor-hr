@@ -3,8 +3,13 @@ package com.hr.manager
 import com.hr.manager.routes.managerClassStatsRoutes
 import com.hr.manager.routes.managerContractStatsRoutes
 import com.hr.manager.routes.managerDashboardRoutes
+import com.hr.manager.routes.managerDirectorateStatsRoutes
+import com.hr.manager.routes.managerGenderStatsRoutes
+import com.hr.manager.routes.managerLeaveTypeStatsRoutes
 import com.hr.manager.routes.managerManagementStatsRoutes
 import com.hr.manager.routes.managerProfessionalStatsRoutes
+import com.hr.manager.routes.managerSalaryGradeStatsRoutes
+import com.hr.manager.routes.managerStaffCategoryStatsRoutes
 import com.hr.manager.routes.managerUserDetailsRoutes
 import com.hr.manager.routes.managerUsersRoutes
 import io.ktor.server.application.Application
@@ -23,6 +28,12 @@ fun Application.managerModule() {
                 managerContractStatsRoutes()
                 managerProfessionalStatsRoutes()
                 managerManagementStatsRoutes()
+                managerDirectorateStatsRoutes()
+                managerLeaveTypeStatsRoutes()
+                managerSalaryGradeStatsRoutes()
+                managerStaffCategoryStatsRoutes()
+                managerGenderStatsRoutes()
+
             }
         }
     }
