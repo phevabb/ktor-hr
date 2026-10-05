@@ -13,6 +13,24 @@ import org.jetbrains.exposed.v1.r2dbc.selectAll
 
 object ManagerUsersRepository {
 
+    fun getAccountRole(
+        row: ResultRow
+    ): String {
+        val accountRole =
+            row[
+                Accounts.role
+            ]
+
+        println(
+            "Authenticated account database role: ${accountRole?.name ?: "Not assigned"}"
+        )
+
+        return accountRole
+            ?.name
+            ?: ""
+    }
+
+
     suspend fun findManagerAccount(
         accountId: Int
     ): ResultRow? {

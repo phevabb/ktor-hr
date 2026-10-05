@@ -11,6 +11,48 @@ import org.jetbrains.exposed.v1.r2dbc.selectAll
 
 object ManagerUsersByFilterRepository {
 
+
+
+
+    private fun professionalValuesMatch(
+        actualValue: String?,
+        requestedValue: String
+    ): Boolean {
+        val normalizedActualValue =
+            normalizeProfessionalValue(
+                actualValue
+            )
+
+        val normalizedRequestedValue =
+            normalizeProfessionalValue(
+                requestedValue
+            )
+
+        return (
+                normalizedActualValue.isNotBlank() &&
+                        normalizedActualValue ==
+                        normalizedRequestedValue
+                )
+    }
+
+    private fun normalizeProfessionalValue(
+        value: String?
+    ): String {
+        return normalizeValue(
+            value
+        )
+            .replace(
+                oldValue =
+                    "SUBPROFESSIONAL",
+
+                newValue =
+                    "SUB PROFESSIONAL"
+            )
+    }
+
+
+
+
     private val ageRanges =
         linkedMapOf(
             "20 - 30" to
@@ -27,7 +69,7 @@ object ManagerUsersByFilterRepository {
         )
 
     suspend fun getUsersByFilter(
-        managerRegionId: Int,
+        regionScopeId: Int?,
         requestedFilter: String
     ): ManagerUsersByFilterRepositoryResult {
         println(
@@ -39,7 +81,7 @@ object ManagerUsersByFilterRepository {
         )
 
         println(
-            "Manager region ID: $managerRegionId"
+            "Manager region ID: $regionScopeId"
         )
 
         println(
@@ -82,7 +124,7 @@ object ManagerUsersByFilterRepository {
                         Accounts.regionId
                     ]
                         ?.value ==
-                            managerRegionId
+                            regionScopeId
                 }
                 .sortedWith(
                     compareBy<ResultRow>(
@@ -180,8 +222,8 @@ object ManagerUsersByFilterRepository {
                     filterType =
                         filterType,
 
-                    managerRegionId =
-                        managerRegionId
+                    regionScopeId =
+                        regionScopeId
                 )
             }
 
@@ -215,126 +257,244 @@ object ManagerUsersByFilterRepository {
         accounts: List<AccountResponse>,
         requestedFilter: String
     ): String? {
-        if (
+        println(
+            "Determining filter type"
+        )
+
+        println(
+            "Requested filter: $requestedFilter"
+        )
+
+        val normalizedRequestedFilter =
+            normalizeValue(
+                requestedFilter
+            )
+
+        println(
+            "Normalized requested filter: $normalizedRequestedFilter"
+        )
+
+        val departmentMatched =
             accounts.any { account ->
                 valuesMatch(
-                    account.directorateName,
-                    requestedFilter
+                    actualValue =
+                        account.directorateName,
+
+                    requestedValue =
+                        normalizedRequestedFilter
                 )
             }
-        ) {
+
+        if (departmentMatched) {
+            println(
+                "Requested filter matched department"
+            )
+
             return "department"
         }
 
-        if (
+        val classMatched =
             accounts.any { account ->
                 valuesMatch(
-                    account.categoryName,
-                    requestedFilter
+                    actualValue =
+                        account.categoryName,
+
+                    requestedValue =
+                        normalizedRequestedFilter
                 )
             }
-        ) {
+
+        if (classMatched) {
+            println(
+                "Requested filter matched class"
+            )
+
             return "class"
         }
 
-        if (
+        val regionMatched =
             accounts.any { account ->
                 valuesMatch(
-                    account.regionName,
-                    requestedFilter
+                    actualValue =
+                        account.regionName,
+
+                    requestedValue =
+                        normalizedRequestedFilter
                 )
             }
-        ) {
+
+        if (regionMatched) {
+            println(
+                "Requested filter matched region"
+            )
+
             return "region"
         }
 
-        if (
+        val managementUnitMatched =
             accounts.any { account ->
                 valuesMatch(
-                    account.managementUnitCostCentreName,
-                    requestedFilter
+                    actualValue =
+                        account.managementUnitCostCentreName,
+
+                    requestedValue =
+                        normalizedRequestedFilter
                 )
             }
-        ) {
+
+        if (managementUnitMatched) {
+            println(
+                "Requested filter matched management unit"
+            )
+
             return "unit"
         }
 
-        if (
-            requestedFilter in
-            setOf(
-                "SENIOR STAFF",
-                "JUNIOR STAFF"
+        val staffCategoryMatched =
+            accounts.any { account ->
+                valuesMatch(
+                    actualValue =
+                        account.staffCategory,
+
+                    requestedValue =
+                        normalizedRequestedFilter
+                )
+            }
+
+        if (staffCategoryMatched) {
+            println(
+                "Requested filter matched staff category"
             )
-        ) {
+
             return "staff category"
         }
 
-        if (
-            requestedFilter in
-            setOf(
-                "MALE",
-                "FEMALE"
+        val genderMatched =
+            accounts.any { account ->
+                valuesMatch(
+                    actualValue =
+                        account.gender,
+
+                    requestedValue =
+                        normalizedRequestedFilter
+                )
+            }
+
+        if (genderMatched) {
+            println(
+                "Requested filter matched gender"
             )
-        ) {
+
             return "gender category"
         }
 
-        if (
-            requestedFilter in
-            setOf(
-                "NO",
-                "STUDY LEAVE WITH PAY",
-                "STUDY LEAVE WITHOUT PAY"
+        val leaveTypeMatched =
+            accounts.any { account ->
+                valuesMatch(
+                    actualValue =
+                        account.onLeaveTypeName,
+
+                    requestedValue =
+                        normalizedRequestedFilter
+                )
+            }
+
+        if (leaveTypeMatched) {
+            println(
+                "Requested filter matched leave type"
             )
-        ) {
+
             return "leave type"
         }
 
-        if (
-            requestedFilter in
-            setOf(
-                "FULLTIME",
-                "CONTRACT"
+        val agreementTypeMatched =
+            accounts.any { account ->
+                valuesMatch(
+                    actualValue =
+                        account.fulltimeContractStaff,
+
+                    requestedValue =
+                        normalizedRequestedFilter
+                )
+            }
+
+        if (agreementTypeMatched) {
+            println(
+                "Requested filter matched agreement type"
             )
-        ) {
+
             return "agreement type"
         }
 
-        if (
-            requestedFilter in
-            setOf(
-                "PROFESSIONAL",
-                "SUBPROFESSIONAL"
+        val professionalTypeMatched =
+            accounts.any { account ->
+                professionalValuesMatch(
+                    actualValue =
+                        account.professional,
+
+                    requestedValue =
+                        normalizedRequestedFilter
+                )
+            }
+
+        if (professionalTypeMatched) {
+            println(
+                "Requested filter matched professional type"
             )
-        ) {
+
             return "professional type"
         }
 
-        if (
-            isSalaryRange(
-                requestedFilter
+        val salaryRangeMatched =
+            accounts.any { account ->
+                salaryValuesMatch(
+                    actualValue =
+                        account.currentSalaryLevel,
+
+                    requestedValue =
+                        normalizedRequestedFilter
+                )
+            }
+
+        if (salaryRangeMatched) {
+            println(
+                "Requested filter matched salary range"
             )
-        ) {
+
             return "salary range"
         }
 
         if (
-            requestedFilter in
+            normalizedRequestedFilter in
             ageRanges.keys ||
-            requestedFilter ==
+            normalizedRequestedFilter ==
             "61+"
         ) {
+            println(
+                "Requested filter matched age range"
+            )
+
             return "age range"
         }
 
+        println(
+            "Requested filter did not match any supported filter type"
+        )
+
+        printAvailableFilterValues(
+            accounts =
+                accounts
+        )
+
         return null
     }
+
 
     private fun accountMatchesFilter(
         account: AccountResponse,
         requestedFilter: String,
         filterType: String,
-        managerRegionId: Int
+        regionScopeId: Int?
     ): Boolean {
         /*
          * Keep this additional region validation even though
@@ -342,7 +502,7 @@ object ManagerUsersByFilterRepository {
          */
         if (
             account.regionId !=
-            managerRegionId
+            regionScopeId
         ) {
             return false
         }
@@ -442,12 +602,40 @@ object ManagerUsersByFilterRepository {
         actualValue: String?,
         requestedValue: String
     ): Boolean {
-        return normalizeValue(
-            actualValue
-        ) ==
-                normalizeValue(
-                    requestedValue
-                )
+        val normalizedActualValue =
+            normalizeValue(
+                actualValue
+            )
+
+        val normalizedRequestedValue =
+            normalizeValue(
+                requestedValue
+            )
+
+        val matched =
+            normalizedActualValue.isNotBlank() &&
+                    normalizedActualValue ==
+                    normalizedRequestedValue
+
+        if (matched) {
+            println(
+                "Filter value matched"
+            )
+
+            println(
+                "Actual value: $actualValue"
+            )
+
+            println(
+                "Requested value: $requestedValue"
+            )
+
+            println(
+                "Normalized value: $normalizedActualValue"
+            )
+        }
+
+        return matched
     }
 
     private fun salaryValuesMatch(
@@ -546,12 +734,36 @@ object ManagerUsersByFilterRepository {
     ): String {
         return value
             ?.trim()
+            ?.uppercase(
+                Locale.ROOT
+            )
             ?.replace(
                 oldChar =
                     '_',
 
                 newChar =
                     ' '
+            )
+            ?.replace(
+                oldChar =
+                    '-',
+
+                newChar =
+                    ' '
+            )
+            ?.replace(
+                oldValue =
+                    "&",
+
+                newValue =
+                    "AND"
+            )
+            ?.replace(
+                oldValue =
+                    "CHIEFTANCY",
+
+                newValue =
+                    "CHIEFTAINCY"
             )
             ?.replace(
                 regex =
@@ -562,9 +774,110 @@ object ManagerUsersByFilterRepository {
                 replacement =
                     " "
             )
-            ?.uppercase(
-                Locale.ROOT
-            )
+            ?.trim()
             ?: ""
+    }
+
+
+
+
+
+    private fun printAvailableFilterValues(
+        accounts: List<AccountResponse>
+    ) {
+        println(
+            "Available department values:"
+        )
+
+        accounts
+            .mapNotNull {
+                it.directorateName
+            }
+            .filter {
+                it.isNotBlank()
+            }
+            .distinct()
+            .sorted()
+            .forEach { value ->
+                println(
+                    "Department: $value"
+                )
+            }
+
+        println(
+            "Available class values:"
+        )
+
+        accounts
+            .mapNotNull {
+                it.categoryName
+            }
+            .filter {
+                it.isNotBlank()
+            }
+            .distinct()
+            .sorted()
+            .forEach { value ->
+                println(
+                    "Class: $value"
+                )
+            }
+
+        println(
+            "Available region values:"
+        )
+
+        accounts
+            .mapNotNull {
+                it.regionName
+            }
+            .filter {
+                it.isNotBlank()
+            }
+            .distinct()
+            .sorted()
+            .forEach { value ->
+                println(
+                    "Region: $value"
+                )
+            }
+
+        println(
+            "Available management-unit values:"
+        )
+
+        accounts
+            .mapNotNull {
+                it.managementUnitCostCentreName
+            }
+            .filter {
+                it.isNotBlank()
+            }
+            .distinct()
+            .sorted()
+            .forEach { value ->
+                println(
+                    "Management unit: $value"
+                )
+            }
+
+        println(
+            "Available staff-category values:"
+        )
+
+        accounts
+            .mapNotNull {
+                it.staffCategory
+            }
+            .filter {
+                it.isNotBlank()
+            }
+            .distinct()
+            .sorted()
+            .forEach { value ->
+                println(
+                    "Staff category: $value"
+                )
+            }
     }
 }

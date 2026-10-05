@@ -1,4 +1,4 @@
-package com.hr.manager.services
+package com.hr.manager.repositories
 
 import com.hr.manager.dtos.ManagerUsersByFilterResponse
 

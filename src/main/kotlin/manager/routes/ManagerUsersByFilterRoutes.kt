@@ -2,7 +2,8 @@ package com.hr.manager.routes
 
 import com.hr.auth.models.AuthPrincipal
 import com.hr.config.DatabaseFactory.dbQuery
-import com.hr.manager.services.ManagerUsersByFilterResult
+import com.hr.manager.repositories.ManagerUsersByFilterResult
+
 import com.hr.manager.services.ManagerUsersByFilterService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.principal
@@ -11,7 +12,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 
 fun Route.managerUsersByFilterRoutes() {
-    get("/users-per-department") {
+    get("/users-per-department/manager") {
         println(
             "=================================================="
         )
@@ -135,13 +136,7 @@ fun Route.managerUsersByFilterRoutes() {
                     "Manager filtered users returned successfully"
                 )
 
-                println(
-                    "Total matching users: ${result.response.count}"
-                )
 
-                println(
-                    "=================================================="
-                )
 
                 call.respond(
                     HttpStatusCode.OK,
@@ -170,23 +165,9 @@ fun Route.managerUsersByFilterRoutes() {
             }
 
             ManagerUsersByFilterResult.ManagerAccountInactive -> {
-                call.respond(
-                    HttpStatusCode.Forbidden,
-                    mapOf(
-                        "detail" to
-                                "This Manager account is inactive."
-                    )
-                )
             }
 
             ManagerUsersByFilterResult.ManagerRegionNotAssigned -> {
-                call.respond(
-                    HttpStatusCode.BadRequest,
-                    mapOf(
-                        "detail" to
-                                "A region has not been assigned to this Manager account."
-                    )
-                )
             }
 
             ManagerUsersByFilterResult.FilterRequired -> {

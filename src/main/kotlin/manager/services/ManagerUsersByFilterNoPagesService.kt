@@ -15,11 +15,11 @@ object ManagerUsersByFilterNoPagesService {
         )
 
         println(
-            "Manager non-paginated users-by-filter service started"
+            "Non-paginated users-by-filter service started"
         )
 
         println(
-            "Authenticated Manager account ID: $managerAccountId"
+            "Authenticated account ID: $managerAccountId"
         )
 
         println(
@@ -31,7 +31,7 @@ object ManagerUsersByFilterNoPagesService {
 
         if (cleanFilter.isBlank()) {
             println(
-                "Non-paginated users-by-filter request rejected"
+                "Users-by-filter request rejected"
             )
 
             println(
@@ -46,7 +46,7 @@ object ManagerUsersByFilterNoPagesService {
                 .FilterRequired
         }
 
-        val managerRow =
+        val accountRow =
             try {
                 ManagerUsersRepository
                     .findManagerAccount(
@@ -55,7 +55,7 @@ object ManagerUsersByFilterNoPagesService {
                     )
             } catch (exception: Exception) {
                 println(
-                    "Unable to retrieve authenticated Manager account"
+                    "Unable to retrieve authenticated account"
                 )
 
                 printExceptionDetails(
@@ -71,11 +71,11 @@ object ManagerUsersByFilterNoPagesService {
             }
                 ?: run {
                     println(
-                        "Authenticated Manager account was not found"
+                        "Authenticated account was not found"
                     )
 
                     println(
-                        "Manager account ID: $managerAccountId"
+                        "Account ID: $managerAccountId"
                     )
 
                     println(
@@ -87,18 +87,18 @@ object ManagerUsersByFilterNoPagesService {
                 }
 
         println(
-            "Authenticated Manager account was found"
+            "Authenticated account was found"
         )
 
-        val managerIsActive =
+        val accountIsActive =
             try {
                 ManagerUsersRepository
                     .isActive(
-                        managerRow
+                        accountRow
                     )
             } catch (exception: Exception) {
                 println(
-                    "Unable to check Manager account active status"
+                    "Unable to check authenticated account active status"
                 )
 
                 printExceptionDetails(
@@ -114,16 +114,16 @@ object ManagerUsersByFilterNoPagesService {
             }
 
         println(
-            "Manager account active: $managerIsActive"
+            "Authenticated account active status: $accountIsActive"
         )
 
-        if (!managerIsActive) {
+        if (!accountIsActive) {
             println(
-                "Non-paginated users-by-filter request rejected"
+                "Users-by-filter request rejected"
             )
 
             println(
-                "Reason: Manager account is inactive"
+                "Reason: Authenticated account is inactive"
             )
 
             println(
@@ -134,40 +134,56 @@ object ManagerUsersByFilterNoPagesService {
                 .ManagerAccountInactive
         }
 
-        val accountIsManager =
-            try {
-                ManagerUsersRepository
-                    .isManager(
-                        managerRow
-                    )
-            } catch (exception: Exception) {
-                println(
-                    "Unable to check authenticated account role"
+        val accountRole =
+            ManagerUsersRepository
+                .getAccountRole(
+                    accountRow
                 )
-
-                printExceptionDetails(
-                    exception
-                )
-
-                println(
-                    "=================================================="
-                )
-
-                return ManagerUsersByFilterNoPagesResult
-                    .Failed
-            }
 
         println(
-            "Authenticated account has Manager role: $accountIsManager"
+            "Authenticated account database role: $accountRole"
         )
 
-        if (!accountIsManager) {
+        val accountIsAdmin =
+            accountRole.equals(
+                other =
+                    "Admin",
+
+                ignoreCase =
+                    true
+            )
+
+        val accountIsManager =
+            accountRole.equals(
+                other =
+                    "Manager",
+
+                ignoreCase =
+                    true
+            )
+
+        println(
+            "Authenticated account is Admin: $accountIsAdmin"
+        )
+
+        println(
+            "Authenticated account is Manager: $accountIsManager"
+        )
+
+        if (
+            !accountIsAdmin &&
+            !accountIsManager
+        ) {
             println(
-                "Non-paginated users-by-filter request rejected"
+                "Users-by-filter request rejected"
             )
 
             println(
-                "Reason: Authenticated account is not a Manager"
+                "Reason: Admin or Manager access is required"
+            )
+
+            println(
+                "Current role: $accountRole"
             )
 
             println(
@@ -178,39 +194,32 @@ object ManagerUsersByFilterNoPagesService {
                 .AccessDenied
         }
 
-        val managerRegionId =
-            try {
-                ManagerUsersRepository
-                    .getManagerRegionId(
-                        managerRow
-                    )
-            } catch (exception: Exception) {
+        /*
+         * Admin receives a null region scope, which means
+         * users from all regions may be searched.
+         *
+         * Manager receives the Manager's assigned region ID.
+         */
+        val regionScopeId =
+            if (accountIsAdmin) {
                 println(
-                    "Unable to retrieve Manager region"
+                    "Admin access granted across all regions"
                 )
 
-                printExceptionDetails(
-                    exception
-                )
-
-                println(
-                    "=================================================="
-                )
-
-                return ManagerUsersByFilterNoPagesResult
-                    .Failed
-            }
-                ?: run {
+                null
+            } else {
+                try {
+                    ManagerUsersRepository
+                        .getManagerRegionId(
+                            accountRow
+                        )
+                } catch (exception: Exception) {
                     println(
-                        "Non-paginated users-by-filter request rejected"
+                        "Unable to retrieve Manager region"
                     )
 
-                    println(
-                        "Reason: Manager does not have an assigned region"
-                    )
-
-                    println(
-                        "Manager account ID: $managerAccountId"
+                    printExceptionDetails(
+                        exception
                     )
 
                     println(
@@ -218,11 +227,32 @@ object ManagerUsersByFilterNoPagesService {
                     )
 
                     return ManagerUsersByFilterNoPagesResult
-                        .ManagerRegionNotAssigned
+                        .Failed
                 }
+                    ?: run {
+                        println(
+                            "Users-by-filter request rejected"
+                        )
+
+                        println(
+                            "Reason: Manager does not have an assigned region"
+                        )
+
+                        println(
+                            "Account ID: $managerAccountId"
+                        )
+
+                        println(
+                            "=================================================="
+                        )
+
+                        return ManagerUsersByFilterNoPagesResult
+                            .ManagerRegionNotAssigned
+                    }
+            }
 
         println(
-            "Manager region ID: $managerRegionId"
+            "Applied region scope: ${regionScopeId ?: "ALL REGIONS"}"
         )
 
         return try {
@@ -233,8 +263,8 @@ object ManagerUsersByFilterNoPagesService {
             val repositoryResult =
                 ManagerUsersByFilterRepository
                     .getUsersByFilter(
-                        managerRegionId =
-                            managerRegionId,
+                        regionScopeId =
+                            regionScopeId,
 
                         requestedFilter =
                             cleanFilter
@@ -259,15 +289,19 @@ object ManagerUsersByFilterNoPagesService {
                 )
 
             println(
-                "Manager non-paginated users-by-filter completed successfully"
+                "Non-paginated users-by-filter completed successfully"
             )
 
             println(
-                "Manager account ID: $managerAccountId"
+                "Authenticated account ID: $managerAccountId"
             )
 
             println(
-                "Manager region ID: $managerRegionId"
+                "Authenticated role: $accountRole"
+            )
+
+            println(
+                "Applied region scope: ${regionScopeId ?: "ALL REGIONS"}"
             )
 
             println(
@@ -290,7 +324,8 @@ object ManagerUsersByFilterNoPagesService {
                     "Matched user ${index + 1}: " +
                             "accountId=${account.id}, " +
                             "userId=${account.userId}, " +
-                            "fullName=${account.fullName}"
+                            "fullName=${account.fullName}, " +
+                            "region=${account.regionName}"
                 )
             }
 
@@ -304,15 +339,19 @@ object ManagerUsersByFilterNoPagesService {
             )
         } catch (exception: Exception) {
             println(
-                "Manager non-paginated users-by-filter service failed"
+                "Non-paginated users-by-filter service failed"
             )
 
             println(
-                "Manager account ID: $managerAccountId"
+                "Authenticated account ID: $managerAccountId"
             )
 
             println(
-                "Manager region ID: $managerRegionId"
+                "Authenticated role: $accountRole"
+            )
+
+            println(
+                "Applied region scope: ${regionScopeId ?: "ALL REGIONS"}"
             )
 
             println(

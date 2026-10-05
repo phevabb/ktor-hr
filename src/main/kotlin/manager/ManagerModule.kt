@@ -20,6 +20,8 @@ import com.hr.manager.routes.managerUsersByFilterNoPagesRoutes
 import com.hr.manager.routes.managerUsersByFilterRoutes
 import com.hr.manager.routes.managerUsersExcelRoutes
 import com.hr.manager.routes.managerUsersRoutes
+import com.hr.superadmin.routes.adminUsersByFilterNoPagesRoutes
+import com.hr.superadmin.routes.adminUsersByFilterRoutes
 import io.ktor.server.application.Application
 import io.ktor.server.auth.authenticate
 import io.ktor.server.routing.route
@@ -49,6 +51,8 @@ fun Application.managerModule() {
                 managerRemoveUserRoutes()
                 managerUsersByFilterRoutes()
                 managerUsersByFilterNoPagesRoutes()
+                adminUsersByFilterNoPagesRoutes()
+                adminUsersByFilterRoutes()
 
 
             }

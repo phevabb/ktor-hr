@@ -3,6 +3,7 @@ package com.hr.manager.services
 import com.hr.manager.dtos.ManagerUsersByFilterResponse
 import com.hr.manager.dtos.ManagerUsersByFilterResults
 import com.hr.manager.repositories.ManagerUsersByFilterRepository
+import com.hr.manager.repositories.ManagerUsersByFilterResult
 import com.hr.manager.repositories.ManagerUsersRepository
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -24,11 +25,11 @@ object ManagerUsersByFilterService {
         )
 
         println(
-            "Manager users-by-filter service started"
+            "Users-by-filter service started"
         )
 
         println(
-            "Authenticated Manager account ID: $managerAccountId"
+            "Authenticated account ID: $managerAccountId"
         )
 
         println(
@@ -55,15 +56,36 @@ object ManagerUsersByFilterService {
                 .FilterRequired
         }
 
-        val managerRow =
-            ManagerUsersRepository
-                .findManagerAccount(
-                    accountId =
-                        managerAccountId
+        val accountRow =
+            try {
+                ManagerUsersRepository
+                    .findManagerAccount(
+                        accountId =
+                            managerAccountId
+                    )
+            } catch (exception: Exception) {
+                println(
+                    "Unable to retrieve authenticated account"
                 )
+
+                printExceptionDetails(
+                    exception
+                )
+
+                println(
+                    "=================================================="
+                )
+
+                return ManagerUsersByFilterResult
+                    .Failed
+            }
                 ?: run {
                     println(
-                        "Authenticated Manager account was not found"
+                        "Authenticated account was not found"
+                    )
+
+                    println(
+                        "Account ID: $managerAccountId"
                     )
 
                     println(
@@ -74,19 +96,44 @@ object ManagerUsersByFilterService {
                         .ManagerAccountNotFound
                 }
 
-        val managerIsActive =
-            ManagerUsersRepository
-                .isActive(
-                    managerRow
+        println(
+            "Authenticated account was found"
+        )
+
+        val accountIsActive =
+            try {
+                ManagerUsersRepository
+                    .isActive(
+                        accountRow
+                    )
+            } catch (exception: Exception) {
+                println(
+                    "Unable to check authenticated account active status"
                 )
 
-        if (!managerIsActive) {
+                printExceptionDetails(
+                    exception
+                )
+
+                println(
+                    "=================================================="
+                )
+
+                return ManagerUsersByFilterResult
+                    .Failed
+            }
+
+        println(
+            "Authenticated account active status: $accountIsActive"
+        )
+
+        if (!accountIsActive) {
             println(
                 "Users-by-filter request rejected"
             )
 
             println(
-                "Reason: Manager account is inactive"
+                "Reason: Authenticated account is inactive"
             )
 
             println(
@@ -97,19 +144,73 @@ object ManagerUsersByFilterService {
                 .ManagerAccountInactive
         }
 
-        val accountIsManager =
-            ManagerUsersRepository
-                .isManager(
-                    managerRow
+        val accountRole =
+            try {
+                ManagerUsersRepository
+                    .getAccountRole(
+                        accountRow
+                    )
+            } catch (exception: Exception) {
+                println(
+                    "Unable to retrieve authenticated account role"
                 )
 
-        if (!accountIsManager) {
+                printExceptionDetails(
+                    exception
+                )
+
+                println(
+                    "=================================================="
+                )
+
+                return ManagerUsersByFilterResult
+                    .Failed
+            }
+
+        println(
+            "Authenticated account database role: $accountRole"
+        )
+
+        val accountIsAdmin =
+            accountRole.equals(
+                other =
+                    "Admin",
+
+                ignoreCase =
+                    true
+            )
+
+        val accountIsManager =
+            accountRole.equals(
+                other =
+                    "Manager",
+
+                ignoreCase =
+                    true
+            )
+
+        println(
+            "Authenticated account is Admin: $accountIsAdmin"
+        )
+
+        println(
+            "Authenticated account is Manager: $accountIsManager"
+        )
+
+        if (
+            !accountIsAdmin &&
+            !accountIsManager
+        ) {
             println(
                 "Users-by-filter request rejected"
             )
 
             println(
-                "Reason: Authenticated account is not a Manager"
+                "Reason: Admin or Manager access is required"
+            )
+
+            println(
+                "Current role: $accountRole"
             )
 
             println(
@@ -120,18 +221,35 @@ object ManagerUsersByFilterService {
                 .AccessDenied
         }
 
-        val managerRegionId =
-            ManagerUsersRepository
-                .getManagerRegionId(
-                    managerRow
+        /*
+         * A null region scope means access to all regions.
+         *
+         * Admin:
+         * regionScopeId = null
+         *
+         * Manager:
+         * regionScopeId = assigned region ID
+         */
+        val regionScopeId =
+            if (accountIsAdmin) {
+                println(
+                    "Admin access granted across all regions"
                 )
-                ?: run {
+
+                null
+            } else {
+                try {
+                    ManagerUsersRepository
+                        .getManagerRegionId(
+                            accountRow
+                        )
+                } catch (exception: Exception) {
                     println(
-                        "Users-by-filter request rejected"
+                        "Unable to retrieve Manager region"
                     )
 
-                    println(
-                        "Reason: Manager has no assigned region"
+                    printExceptionDetails(
+                        exception
                     )
 
                     println(
@@ -139,19 +257,40 @@ object ManagerUsersByFilterService {
                     )
 
                     return ManagerUsersByFilterResult
-                        .ManagerRegionNotAssigned
+                        .Failed
                 }
+                    ?: run {
+                        println(
+                            "Users-by-filter request rejected"
+                        )
+
+                        println(
+                            "Reason: Manager has no assigned region"
+                        )
+
+                        println(
+                            "Manager account ID: $managerAccountId"
+                        )
+
+                        println(
+                            "=================================================="
+                        )
+
+                        return ManagerUsersByFilterResult
+                            .ManagerRegionNotAssigned
+                    }
+            }
 
         println(
-            "Manager region ID: $managerRegionId"
+            "Applied region scope: ${regionScopeId ?: "ALL REGIONS"}"
         )
 
         return try {
             val repositoryResult =
                 ManagerUsersByFilterRepository
                     .getUsersByFilter(
-                        managerRegionId =
-                            managerRegionId,
+                        regionScopeId =
+                            regionScopeId,
 
                         requestedFilter =
                             cleanFilter
@@ -206,6 +345,7 @@ object ManagerUsersByFilterService {
                 min(
                     startIndex +
                             safePageSize,
+
                     totalRecords
                 )
 
@@ -282,8 +422,7 @@ object ManagerUsersByFilterService {
                                 cleanFilter,
 
                             filterType =
-                                repositoryResult
-                                    .filterType,
+                                repositoryResult.filterType,
 
                             count =
                                 totalRecords,
@@ -294,7 +433,19 @@ object ManagerUsersByFilterService {
                 )
 
             println(
-                "Manager users-by-filter completed successfully"
+                "Users-by-filter completed successfully"
+            )
+
+            println(
+                "Authenticated account ID: $managerAccountId"
+            )
+
+            println(
+                "Authenticated account role: $accountRole"
+            )
+
+            println(
+                "Applied region scope: ${regionScopeId ?: "ALL REGIONS"}"
             )
 
             println(
@@ -302,7 +453,7 @@ object ManagerUsersByFilterService {
             )
 
             println(
-                "Filter type: ${repositoryResult.filterType}"
+                "Filter type: ${repositoryResult.filterType ?: "None"}"
             )
 
             println(
@@ -314,7 +465,23 @@ object ManagerUsersByFilterService {
             )
 
             println(
+                "Validated page size: $safePageSize"
+            )
+
+            println(
+                "Total pages: $totalPages"
+            )
+
+            println(
                 "Users returned: ${pageUsers.size}"
+            )
+
+            println(
+                "Next page URL: ${nextPageUrl ?: "None"}"
+            )
+
+            println(
+                "Previous page URL: ${previousPageUrl ?: "None"}"
             )
 
             println(
@@ -327,38 +494,28 @@ object ManagerUsersByFilterService {
             )
         } catch (exception: Exception) {
             println(
-                "Manager users-by-filter service failed"
+                "Users-by-filter service failed"
             )
 
             println(
-                "Manager account ID: $managerAccountId"
+                "Authenticated account ID: $managerAccountId"
             )
 
             println(
-                "Manager region ID: $managerRegionId"
+                "Authenticated account role: $accountRole"
+            )
+
+            println(
+                "Applied region scope: ${regionScopeId ?: "ALL REGIONS"}"
             )
 
             println(
                 "Requested filter: $cleanFilter"
             )
 
-            println(
-                "Error type: ${exception::class.simpleName}"
+            printExceptionDetails(
+                exception
             )
-
-            println(
-                "Error message: ${exception.message}"
-            )
-
-            exception.cause?.let { cause ->
-                println(
-                    "Cause type: ${cause::class.simpleName}"
-                )
-
-                println(
-                    "Cause message: ${cause.message}"
-                )
-            }
 
             println(
                 "=================================================="
@@ -386,5 +543,39 @@ object ManagerUsersByFilterService {
                 "?dept=$encodedFilter" +
                 "&page=$page" +
                 "&page_size=$pageSize"
+    }
+
+    private fun printExceptionDetails(
+        exception: Exception
+    ) {
+        println(
+            "Error type: ${exception::class.simpleName}"
+        )
+
+        println(
+            "Error message: ${exception.message}"
+        )
+
+        var currentCause =
+            exception.cause
+
+        var causeLevel =
+            1
+
+        while (currentCause != null) {
+            println(
+                "Cause $causeLevel type: ${currentCause::class.simpleName}"
+            )
+
+            println(
+                "Cause $causeLevel message: ${currentCause.message}"
+            )
+
+            currentCause =
+                currentCause.cause
+
+            causeLevel +=
+                1
+        }
     }
 }

@@ -11,7 +11,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 
 fun Route.managerUsersByFilterNoPagesRoutes() {
-    get("/users-per-department-no-pages") {
+    get("/users-per-department-no-pages/manager") {
         println(
             "=================================================="
         )
