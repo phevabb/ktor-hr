@@ -16,6 +16,8 @@ import com.hr.manager.routes.managerSalaryGradeStatsRoutes
 import com.hr.manager.routes.managerStaffCategoryStatsRoutes
 import com.hr.manager.routes.managerUserDetailsRoutes
 import com.hr.manager.routes.managerUserFieldsRoutes
+import com.hr.manager.routes.managerUsersByFilterNoPagesRoutes
+import com.hr.manager.routes.managerUsersByFilterRoutes
 import com.hr.manager.routes.managerUsersExcelRoutes
 import com.hr.manager.routes.managerUsersRoutes
 import io.ktor.server.application.Application
@@ -45,6 +47,8 @@ fun Application.managerModule() {
                 managerUserFieldsRoutes()
                 managerCreateUserRoutes()
                 managerRemoveUserRoutes()
+                managerUsersByFilterRoutes()
+                managerUsersByFilterNoPagesRoutes()
 
 
             }
