@@ -183,41 +183,175 @@ object StaffRepository {
         return rowToSummary(row)
     }
 
+
+
+
+
+
+
     suspend fun getById(
         staffId: Int
     ): StaffDetailResponse? {
         println(
-            "Retrieving staff details: staffId=$staffId"
+            "=================================================="
         )
 
-        val row =
+        println(
+            "Retrieving staff details using database account ID"
+        )
+
+        println(
+            "Received account ID: $staffId"
+        )
+
+        /*
+         * First, locate the account using the numeric
+         * database account ID.
+         *
+         * Do not restrict the first lookup by role because
+         * the purpose is to resolve the account's user ID.
+         */
+        val accountRow =
             Accounts
                 .selectAll()
                 .where {
-                    (Accounts.id eq staffId) and
-                            (Accounts.role eq Role.Staff)
+                    Accounts.id eq
+                            staffId
                 }
                 .firstOrNull()
+                ?: run {
+                    println(
+                        "Account was not found using database ID"
+                    )
 
-        if (row == null) {
-            println(
-                "Staff account not found: staffId=$staffId"
-            )
+                    println(
+                        "Account ID: $staffId"
+                    )
 
-            return null
-        }
+                    println(
+                        "=================================================="
+                    )
 
-        val staff =
-            rowToDetail(row)
+                    return null
+                }
+
+        val resolvedAccountId =
+            accountRow[
+                Accounts.id
+            ].value
+
+        val resolvedUserId =
+            accountRow[
+                Accounts.userId
+            ]
+                ?.trim()
+                ?.takeIf {
+                    it.isNotBlank()
+                }
+                ?: run {
+                    println(
+                        "Account was found but has no valid user ID"
+                    )
+
+                    println(
+                        "Account ID: $resolvedAccountId"
+                    )
+
+                    println(
+                        "=================================================="
+                    )
+
+                    return null
+                }
+
+        val resolvedRole =
+            accountRow[
+                Accounts.role
+            ]
 
         println(
-            "Staff details retrieved: $staff"
+            "Account ID resolved successfully"
+        )
+
+        println(
+            "Account ID: $resolvedAccountId"
+        )
+
+        println(
+            "Corresponding user ID: $resolvedUserId"
+        )
+
+        println(
+            "Account role: ${resolvedRole?.name ?: "Not assigned"}"
+        )
+
+        /*
+         * Now retrieve the complete account record using
+         * the resolved user ID.
+         *
+         * There is intentionally no Role.Staff restriction,
+         * allowing details to be returned for any account
+         * selected from the Admin users list.
+         */
+        val detailRow =
+            Accounts
+                .selectAll()
+                .where {
+                    Accounts.userId eq
+                            resolvedUserId
+                }
+                .firstOrNull()
+                ?: run {
+                    println(
+                        "Account details were not found using the resolved user ID"
+                    )
+
+                    println(
+                        "Account ID: $resolvedAccountId"
+                    )
+
+                    println(
+                        "User ID: $resolvedUserId"
+                    )
+
+                    println(
+                        "=================================================="
+                    )
+
+                    return null
+                }
+
+        val staff =
+            rowToDetail(
+                detailRow
+            )
+
+        println(
+            "Account details retrieved successfully"
+        )
+
+        println(
+            "Account ID: ${staff.id}"
+        )
+
+        println(
+            "User ID: ${staff.userId}"
+        )
+
+        println(
+            "Full name: ${staff.fullName}"
+        )
+
+        println(
+            "Role: ${staff.role}"
+        )
+
+        println(
+            "=================================================="
         )
 
         return staff
     }
-
-
 
 
     suspend fun exists(
