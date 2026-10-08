@@ -15,6 +15,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.r2dbc.selectAll
 
 import com.hr.account.dtos.AccountCreateRequest
+import com.hr.account.dtos.AccountListItemResponse
 import com.hr.account.dtos.AccountResponse
 import com.hr.account.helpers.AccountComputedValues
 import com.hr.account.security.AccountPassword
@@ -498,6 +499,130 @@ object AccountRepository {
         return response
     }
 
+
+
+
+    private fun rowToAccountListItemResponse(
+        row: ResultRow
+    ): AccountListItemResponse {
+        val firstName =
+            row[
+                Accounts.firstName
+            ]
+
+        val middleName =
+            row[
+                Accounts.middleName
+            ]
+
+        val lastName =
+            row[
+                Accounts.lastName
+            ]
+
+        val fullName =
+            AccountComputedValues
+                .fullName(
+                    firstName =
+                        firstName,
+
+                    middleName =
+                        middleName,
+
+                    lastName =
+                        lastName
+                )
+
+        return AccountListItemResponse(
+            id =
+                row[
+                    Accounts.id
+                ].value,
+
+            userId =
+                row[
+                    Accounts.userId
+                ],
+
+            fullName =
+                fullName,
+
+            phoneNumber =
+                row[
+                    Accounts.phoneNumber
+                ],
+
+            email =
+                row[
+                    Accounts.email
+                ],
+
+            role =
+                row[
+                    Accounts.role
+                ]
+                    ?.name,
+
+            gender =
+                row[
+                    Accounts.gender
+                ]
+                    ?.name,
+
+            profilePictureUrl =
+                row[
+                    Accounts.profilePictureUrl
+                ],
+
+            isActive =
+                row[
+                    Accounts.isActive
+                ],
+
+            regionId =
+                row[
+                    Accounts.regionId
+                ]
+                    ?.value,
+
+            districtId =
+                row[
+                    Accounts.districtId
+                ]
+                    ?.value,
+
+            directorateId =
+                row[
+                    Accounts.directorateId
+                ]
+                    ?.value,
+
+            categoryId =
+                row[
+                    Accounts.categoryId
+                ]
+                    ?.value,
+
+            currentGradeId =
+                row[
+                    Accounts.currentGradeId
+                ]
+                    ?.value,
+
+            managementUnitCostCentreId =
+                row[
+                    Accounts.managementUnitCostCentreId
+                ]
+                    ?.value
+        )
+    }
+
+
+
+
+
+
+
     private suspend fun findAcademicQualification(
         academicQualificationId: Int?
     ): AccountAcademicQualificationResponse? {
@@ -801,19 +926,142 @@ object AccountRepository {
 
 
 
+    suspend fun countActive(): Long {
+        println(
+            "AccountRepository.countActive started"
+        )
+
+        val startedAt =
+            System.currentTimeMillis()
+
+        val count =
+            Accounts
+                .selectAll()
+                .where {
+                    Accounts.isActive eq
+                            true
+                }
+                .count()
+
+        println(
+            "AccountRepository.countActive completed"
+        )
+
+        println(
+            "Active account count: $count"
+        )
+
+        println(
+            "Count duration: ${
+                System.currentTimeMillis() -
+                        startedAt
+            } ms"
+        )
+
+        return count
+    }
 
 
+    suspend fun getActivePage(
+        page: Int,
+        pageSize: Int
+    ): List<AccountListItemResponse> {
+        val normalizedPage =
+            page.coerceAtLeast(
+                1
+            )
+
+        val normalizedPageSize =
+            pageSize.coerceIn(
+                minimumValue =
+                    1,
+
+                maximumValue =
+                    100
+            )
+
+        val calculatedOffset =
+            (
+                    normalizedPage -
+                            1
+                    ).toLong() *
+                    normalizedPageSize.toLong()
+
+        println(
+            "Retrieving lightweight active-account page"
+        )
+
+        println(
+            "Page: $normalizedPage"
+        )
+
+        println(
+            "Page size: $normalizedPageSize"
+        )
+
+        println(
+            "Offset: $calculatedOffset"
+        )
+
+        val startedAt =
+            System.currentTimeMillis()
+
+        val accounts =
+            Accounts
+                .selectAll()
+                .where {
+                    Accounts.isActive eq
+                            true
+                }
+                .orderBy(
+                    Accounts.id,
+                    SortOrder.DESC
+                )
+                .limit(
+                    normalizedPageSize
+                )
+                .offset(
+                    calculatedOffset
+                )
+                .map { row ->
+                    rowToAccountListItemResponse(
+                        row
+                    )
+                }
+                .toList()
+
+        println(
+            "Lightweight active-account page retrieved"
+        )
+
+        println(
+            "Accounts returned: ${accounts.size}"
+        )
+
+        println(
+            "Retrieval duration: ${
+                System.currentTimeMillis() -
+                        startedAt
+            } ms"
+        )
+
+        return accounts
+    }
 
     suspend fun getAll(): List<AccountResponse> {
-
         return Accounts
             .selectAll()
+            .where {
+                Accounts.isActive eq true
+            }
             .orderBy(
                 Accounts.id,
                 SortOrder.DESC
             )
             .map { row ->
-                rowToAccountResponse(row)
+                rowToAccountResponse(
+                    row
+                )
             }
             .toList()
     }

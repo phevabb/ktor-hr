@@ -13,7 +13,7 @@ import com.hr.currentgrade.tables.CurrentGrades
 import com.hr.department.table.Departments
 import com.hr.districts.tables.Districts
 import com.hr.managementUnits.tables.ManagementUnits
-import com.hr.manager.table.UserRemovalLogs
+import com.hr.removallogs.table.UserRemovalLogs
 import com.hr.managerprofile.table.ManagerProfiles
 import com.hr.onleavetype.table.OnLeaveTypes
 import com.hr.position.table.Positions

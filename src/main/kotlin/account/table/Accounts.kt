@@ -34,6 +34,11 @@ import org.jetbrains.exposed.v1.javatime.datetime
 object Accounts : IntIdTable("accounts") {
 
 
+    val isActive = bool("is_active")
+        .default(true)
+
+
+
     val academicQualificationId = reference(
         name = "academic_qualification_id",
         foreign = AcademicQualifications,
@@ -52,8 +57,6 @@ object Accounts : IntIdTable("accounts") {
     ).nullable()
 
 
-    val isActive = bool("is_active")
-        .default(true)
 
     val isStaff = bool("is_staff")
         .default(false)

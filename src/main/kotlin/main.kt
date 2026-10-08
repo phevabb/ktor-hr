@@ -19,6 +19,7 @@ import com.hr.nextgrade.configureNextGradeModule
 import com.hr.onleavetype.onLeaveTypeModule
 import com.hr.position.positionModule
 import com.hr.region.regionModule
+import com.hr.removallogs.configureRemovalLogs
 import com.hr.staff.staffModule
 import com.hr.staffclass.staffClassModule
 import com.hr.title.titleModule
@@ -61,6 +62,8 @@ fun Application.module() {
     staffModule()
     adminModule()
     managerModule()
+    configureRemovalLogs()
+
 
 
 }

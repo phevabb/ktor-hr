@@ -1,7 +1,7 @@
 package com.hr.manager.repositories
 
 import com.hr.account.table.Accounts
-import com.hr.manager.table.UserRemovalLogs
+import com.hr.removallogs.table.UserRemovalLogs
 import java.time.LocalDateTime
 import kotlinx.coroutines.flow.firstOrNull
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
