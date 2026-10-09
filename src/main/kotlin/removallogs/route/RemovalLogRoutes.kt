@@ -2,9 +2,12 @@ package com.hr.removallogs.route
 
 import com.hr.auth.models.AuthPrincipal
 import com.hr.config.DatabaseFactory.dbQuery
+import com.hr.removallogs.dto.PaginatedRemovalLogsResponse
+import com.hr.removallogs.dto.RemovalLogErrorResponse
 import com.hr.removallogs.dto.RemoveAccountErrorResponse
 import com.hr.removallogs.dto.RemoveAccountRequest
 import com.hr.removallogs.dto.RemoveAccountSuccessResponse
+import com.hr.removallogs.repository.RemovalLogQueryRepository
 import com.hr.removallogs.service.RemovalAuthorizationResult
 import com.hr.removallogs.service.RemovalLogResult
 import com.hr.removallogs.service.RemovalLogService
@@ -13,9 +16,235 @@ import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 
 fun Route.removalLogRoutes() {
+
+
+
+
+
+    get("/api/removal-logs") {
+        println(
+            "=================================================="
+        )
+
+        println(
+            "GET /api/removal-logs request received"
+        )
+
+        val requestedPage =
+            call.request
+                .queryParameters[
+                "page"
+            ]
+                ?.toIntOrNull()
+                ?: 1
+
+        val requestedPageSize =
+            call.request
+                .queryParameters[
+                "page_size"
+            ]
+                ?.toIntOrNull()
+                ?: 10
+
+        val page =
+            requestedPage.coerceAtLeast(
+                1
+            )
+
+        val pageSize =
+            requestedPageSize.coerceIn(
+                minimumValue = 1,
+                maximumValue = 100
+            )
+
+        println(
+            "Requested page: $page"
+        )
+
+        println(
+            "Requested page size: $pageSize"
+        )
+
+        val requestStartedAt =
+            System.currentTimeMillis()
+
+        val response =
+            try {
+                dbQuery {
+                    val totalCount =
+                        RemovalLogQueryRepository
+                            .countAll()
+
+                    val totalPages =
+                        if (
+                            totalCount == 0L
+                        ) {
+                            1
+                        } else {
+                            (
+                                    (
+                                            totalCount +
+                                                    pageSize -
+                                                    1
+                                            ) /
+                                            pageSize
+                                    ).toInt()
+                        }
+
+                    val safePage =
+                        page.coerceAtMost(
+                            totalPages
+                        )
+
+                    val removalLogs =
+                        RemovalLogQueryRepository
+                            .getPage(
+                                page =
+                                    safePage,
+
+                                pageSize =
+                                    pageSize
+                            )
+
+                    val nextPage =
+                        if (
+                            safePage <
+                            totalPages
+                        ) {
+                            "/api/removal-logs?page=${safePage + 1}&page_size=$pageSize"
+                        } else {
+                            null
+                        }
+
+                    val previousPage =
+                        if (
+                            safePage >
+                            1
+                        ) {
+                            "/api/removal-logs?page=${safePage - 1}&page_size=$pageSize"
+                        } else {
+                            null
+                        }
+
+                    PaginatedRemovalLogsResponse(
+                        count =
+                            totalCount,
+
+                        next =
+                            nextPage,
+
+                        previous =
+                            previousPage,
+
+                        currentPage =
+                            safePage,
+
+                        totalPages =
+                            totalPages,
+
+                        pageSize =
+                            pageSize,
+
+                        results =
+                            removalLogs
+                    )
+                }
+            } catch (
+                exception: Exception
+            ) {
+                println(
+                    "Unable to retrieve removal logs"
+                )
+
+                println(
+                    "Error type: ${exception::class.simpleName}"
+                )
+
+                println(
+                    "Error message: ${exception.message}"
+                )
+
+                exception.cause?.let { cause ->
+                    println(
+                        "Cause type: ${cause::class.simpleName}"
+                    )
+
+                    println(
+                        "Cause message: ${cause.message}"
+                    )
+                }
+
+                exception.printStackTrace()
+
+                println(
+                    "GET /api/removal-logs completed with HTTP 500"
+                )
+
+                println(
+                    "=================================================="
+                )
+
+                return@get call.respond(
+                    HttpStatusCode.InternalServerError,
+                    RemovalLogErrorResponse(
+                        error =
+                            "The removal logs could not be retrieved."
+                    )
+                )
+            }
+
+        val requestDuration =
+            System.currentTimeMillis() -
+                    requestStartedAt
+
+        println(
+            "Removal logs retrieved successfully"
+        )
+
+        println(
+            "Total removal logs: ${response.count}"
+        )
+
+        println(
+            "Current page: ${response.currentPage}"
+        )
+
+        println(
+            "Total pages: ${response.totalPages}"
+        )
+
+        println(
+            "Removal logs returned: ${response.results.size}"
+        )
+
+        println(
+            "Request duration: $requestDuration ms"
+        )
+
+        println(
+            "GET /api/removal-logs completed with HTTP 200"
+        )
+
+        println(
+            "=================================================="
+        )
+
+        call.respond(
+            HttpStatusCode.OK,
+            response
+        )
+    }
+
+
+
+
+
+
+
     post(
         "/api/v1/removal-logs/remove-user"
     ) {
@@ -443,3 +672,50 @@ fun Route.removalLogRoutes() {
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
