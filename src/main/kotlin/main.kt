@@ -3,6 +3,7 @@ package com.hr
 import com.hr.academicqualification.academicQualificationModule
 import com.hr.account.accountModule
 import com.hr.admin.adminModule
+
 import com.hr.auth.authModule
 import com.hr.changeofgrade.changeOfGradeModule
 import com.hr.classes.classesModule
@@ -63,6 +64,7 @@ fun Application.module() {
     adminModule()
     managerModule()
     configureRemovalLogs()
+
 
 
 

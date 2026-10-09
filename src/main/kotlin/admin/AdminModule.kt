@@ -1,5 +1,6 @@
 package com.hr.admin
 
+import com.hr.admin.excel.route.adminUserExcelRoutes
 import com.hr.admin.routes.adminDashboardRoutes
 import com.hr.admin.routes.adminUserFieldsRoutes
 import com.hr.admin.routes.adminUserUpdateRoutes
@@ -44,6 +45,8 @@ fun Application.adminModule() {
                     profilePictureStorage =
                         CloudinaryAdminProfilePictureStorage
                 )
+
+                adminUserExcelRoutes()
             }
 
 
