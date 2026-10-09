@@ -1,10 +1,19 @@
 package com.hr.removallogs.repository
 
+import com.hr.account.table.Accounts
 import com.hr.removallogs.dto.RemovalLogResponse
 import com.hr.removallogs.table.UserRemovalLogs
 import kotlinx.coroutines.flow.toList
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.r2dbc.selectAll
+
+private data class AccountIdentity(
+    val id: Int,
+    val userId: String?,
+    val fullName: String
+)
 
 object RemovalLogQueryRepository {
 
@@ -63,7 +72,7 @@ object RemovalLogQueryRepository {
             "Offset: $calculatedOffset"
         )
 
-        val rows =
+        val removalLogRows =
             UserRemovalLogs
                 .selectAll()
                 .orderBy(
@@ -83,10 +92,118 @@ object RemovalLogQueryRepository {
                 .toList()
 
         println(
-            "Removal-log rows retrieved: ${rows.size}"
+            "Removal-log rows retrieved: ${removalLogRows.size}"
         )
 
-        return rows.map { row ->
+        if (removalLogRows.isEmpty()) {
+            return emptyList()
+        }
+
+        val referencedAccountIds =
+            removalLogRows
+                .flatMap { row ->
+                    listOf(
+                        row[
+                            UserRemovalLogs.accountId
+                        ].value,
+
+                        row[
+                            UserRemovalLogs.removedByAccountId
+                        ].value
+                    )
+                }
+                .distinct()
+
+        println(
+            "Referenced account IDs: $referencedAccountIds"
+        )
+
+        val accountEntityIds =
+            referencedAccountIds.map { accountId ->
+                EntityID(
+                    id = accountId,
+                    table = Accounts
+                )
+            }
+
+        val accountRows =
+            Accounts
+                .selectAll()
+                .where {
+                    Accounts.id inList
+                            accountEntityIds
+                }
+                .toList()
+
+        println(
+            "Referenced accounts retrieved: ${accountRows.size}"
+        )
+
+        val accountIdentityById =
+            accountRows.associate { row ->
+                val accountId =
+                    row[
+                        Accounts.id
+                    ].value
+
+                val userId =
+                    row[
+                        Accounts.userId
+                    ]
+
+                val firstName =
+                    row[
+                        Accounts.firstName
+                    ]
+
+                val middleName =
+                    row[
+                        Accounts.middleName
+                    ]
+
+                val lastName =
+                    row[
+                        Accounts.lastName
+                    ]
+
+                val fullName =
+                    buildFullName(
+                        firstName = firstName,
+                        middleName = middleName,
+                        lastName = lastName,
+                        userId = userId,
+                        accountId = accountId
+                    )
+
+                accountId to
+                        AccountIdentity(
+                            id = accountId,
+                            userId = userId,
+                            fullName = fullName
+                        )
+            }
+
+        return removalLogRows.map { row ->
+            val removedAccountId =
+                row[
+                    UserRemovalLogs.accountId
+                ].value
+
+            val removerAccountId =
+                row[
+                    UserRemovalLogs.removedByAccountId
+                ].value
+
+            val removedAccount =
+                accountIdentityById[
+                    removedAccountId
+                ]
+
+            val removerAccount =
+                accountIdentityById[
+                    removerAccountId
+                ]
+
             RemovalLogResponse(
                 id =
                     row[
@@ -94,14 +211,28 @@ object RemovalLogQueryRepository {
                     ].value,
 
                 accountId =
-                    row[
-                        UserRemovalLogs.accountId
-                    ].value,
+                    removedAccountId,
+
+                removedAccountFullName =
+                    removedAccount
+                        ?.fullName
+                        ?: "Account #$removedAccountId",
+
+                removedAccountUserId =
+                    removedAccount
+                        ?.userId,
 
                 removedByAccountId =
-                    row[
-                        UserRemovalLogs.removedByAccountId
-                    ].value,
+                    removerAccountId,
+
+                removedByFullName =
+                    removerAccount
+                        ?.fullName
+                        ?: "Account #$removerAccountId",
+
+                removedByUserId =
+                    removerAccount
+                        ?.userId,
 
                 removedByRole =
                     row[
@@ -119,5 +250,40 @@ object RemovalLogQueryRepository {
                     ].toString()
             )
         }
+    }
+
+    private fun buildFullName(
+        firstName: String?,
+        middleName: String?,
+        lastName: String?,
+        userId: String?,
+        accountId: Int
+    ): String {
+        val fullName =
+            listOf(
+                firstName,
+                middleName,
+                lastName
+            )
+                .mapNotNull { value ->
+                    value
+                        ?.trim()
+                        ?.takeIf {
+                            it.isNotEmpty()
+                        }
+                }
+                .joinToString(
+                    separator = " "
+                )
+
+        if (fullName.isNotBlank()) {
+            return fullName
+        }
+
+        if (!userId.isNullOrBlank()) {
+            return userId.trim()
+        }
+
+        return "Account #$accountId"
     }
 }
