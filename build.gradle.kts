@@ -1,3 +1,4 @@
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(ktorLibs.plugins.ktor)
@@ -15,6 +16,12 @@ kotlin {
     jvmToolchain(21)
 }
 dependencies {
+
+
+        implementation(
+            "org.eclipse.angus:jakarta.mail:2.0.5"
+        )
+
     implementation(ktorLibs.client.apache)
     implementation(ktorLibs.client.core)
     implementation(ktorLibs.serialization.kotlinx.json)

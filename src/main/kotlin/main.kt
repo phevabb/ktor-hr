@@ -18,6 +18,7 @@ import com.hr.managerprofile.managerProfileModule
 import com.hr.media.mediaModule
 import com.hr.nextgrade.configureNextGradeModule
 import com.hr.onleavetype.onLeaveTypeModule
+import com.hr.password.passwordModule
 import com.hr.position.positionModule
 import com.hr.region.regionModule
 import com.hr.removallogs.configureRemovalLogs
@@ -64,6 +65,8 @@ fun Application.module() {
     adminModule()
     managerModule()
     configureRemovalLogs()
+    passwordModule()
+
 
 
 

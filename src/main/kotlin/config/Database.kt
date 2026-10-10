@@ -16,6 +16,7 @@ import com.hr.managementUnits.tables.ManagementUnits
 import com.hr.removallogs.table.UserRemovalLogs
 import com.hr.managerprofile.table.ManagerProfiles
 import com.hr.onleavetype.table.OnLeaveTypes
+import com.hr.password.table.PasswordResetTokens
 import com.hr.position.table.Positions
 import com.hr.region.tables.Regions
 import com.hr.staffclass.table.StaffClasses
@@ -72,7 +73,8 @@ object DatabaseFactory {
                     Positions,
                     Accounts,
                     ManagerProfiles,
-                    UserRemovalLogs
+                    UserRemovalLogs,
+                    PasswordResetTokens
 
 
 
@@ -94,7 +96,8 @@ object DatabaseFactory {
                         Positions,
                         Accounts,
                         ManagerProfiles,
-                        UserRemovalLogs
+                        UserRemovalLogs,
+                        PasswordResetTokens
                     )
                     .forEach { statement ->
                         exec(statement)
