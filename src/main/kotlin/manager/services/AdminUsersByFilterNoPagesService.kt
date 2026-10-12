@@ -166,7 +166,13 @@ object AdminUsersByFilterNoPagesService {
                 AdminUsersByFilterRepository
                     .getUsersByFilter(
                         requestedFilter =
-                            cleanFilter
+                            cleanFilter,
+
+                        page =
+                            1,
+
+                        pageSize =
+                            100
                     )
 
             val response =

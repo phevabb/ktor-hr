@@ -55,15 +55,15 @@ fun Application.module() {
     runBlocking {
         try {
 //            TitleSeeder.seed()
-            ManagementUnitSeeder.seed()
-            DistrictSeeder.seed()
-            RegionSeeder.seed()
-            DirectorateSeeder.seed()
-             ChangeOfGradeSeeder.seed()
-            NextGradeSeeder.seed()
-            CurrentGradeSeeder.seed()
-            CategorySeeder.seed()
-            AcademicQualificationSeeder.seed()
+//            ManagementUnitSeeder.seed()
+//            DistrictSeeder.seed()
+//            RegionSeeder.seed()
+//            DirectorateSeeder.seed()
+//             ChangeOfGradeSeeder.seed()
+//            NextGradeSeeder.seed()
+//            CurrentGradeSeeder.seed()
+//            CategorySeeder.seed()
+//            AcademicQualificationSeeder.seed()
         } catch (exception: Exception) {
             println(
                 "seeding failed"
