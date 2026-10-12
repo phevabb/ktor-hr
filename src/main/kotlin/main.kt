@@ -54,7 +54,7 @@ fun Application.module() {
 
     runBlocking {
         try {
-            TitleSeeder.seed()
+//            TitleSeeder.seed()
 //            ManagementUnitSeeder.seed()
 //            DistrictSeeder.seed()
 //            RegionSeeder.seed()

@@ -1,35 +1,75 @@
 package com.hr.password.config
 
+import io.github.cdimascio.dotenv.dotenv
+
 object PasswordMailConfig {
 
-    const val host =
-        "smtp.gmail.com"
+    private val environment =
+        dotenv {
+            ignoreIfMissing = true
+        }
 
-    const val username =
-        "stoollandshr@gmail.com"
+    private fun requiredValue(
+        name: String
+    ): String {
+        return environment[name]
+            ?: System.getenv(name)
+            ?: throw IllegalStateException(
+                "Missing required environment variable: $name"
+            )
+    }
 
-    const val password =
-        "yejxekkjwbgiwdic"
+    private fun optionalValue(
+        name: String,
+        defaultValue: String
+    ): String {
+        return environment[name]
+            ?: System.getenv(name)
+            ?: defaultValue
+    }
 
-    const val port =
-        465
+    val host: String =
+        optionalValue(
+            name = "EMAIL_HOST",
+            defaultValue = "smtp.gmail.com"
+        )
 
-    const val useSsl =
-        true
+    val username: String =
+        requiredValue(
+            name = "EMAIL_HOST_USER"
+        )
 
-    const val defaultFromEmail =
-        "stoollandshr@gmail.com"
+    val password: String =
+        requiredValue(
+            name = "EMAIL_HOST_PASSWORD"
+        )
 
-    /*
-     * Production:
-     */
-    const val frontendBaseUrl =
-        "http://localhost:8080"
+    val port: Int =
+        optionalValue(
+            name = "EMAIL_PORT",
+            defaultValue = "465"
+        ).toIntOrNull()
+            ?: throw IllegalStateException(
+                "EMAIL_PORT must be a valid integer."
+            )
 
-    /*
-     * Local testing:
-     *
-     * const val frontendBaseUrl =
-     *     "http://localhost:8080"
-     */
+    val useSsl: Boolean =
+        optionalValue(
+            name = "EMAIL_USE_SSL",
+            defaultValue = "true"
+        ).toBooleanStrictOrNull()
+            ?: throw IllegalStateException(
+                "EMAIL_USE_SSL must be true or false."
+            )
+
+    val defaultFromEmail: String =
+        optionalValue(
+            name = "EMAIL_FROM",
+            defaultValue = username
+        )
+
+    val frontendBaseUrl: String =
+        requiredValue(
+            name = "FRONTEND_BASE_URL"
+        ).trimEnd('/')
 }
