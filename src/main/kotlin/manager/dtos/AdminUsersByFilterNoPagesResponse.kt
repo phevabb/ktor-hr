@@ -1,6 +1,5 @@
-package com.hr.superadmin.dtos
+package com.hr.manager.dtos
 
-import com.hr.account.dtos.AccountResponse
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -14,5 +13,5 @@ data class AdminUsersByFilterNoPagesResponse(
     val count: Int,
 
     val users:
-    List<AccountResponse>
+    List<AdminFilteredUserResponse>
 )

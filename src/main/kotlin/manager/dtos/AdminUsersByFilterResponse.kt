@@ -1,12 +1,11 @@
-package com.hr.superadmin.dtos
+package com.hr.manager.dtos
 
-import com.hr.account.dtos.AccountResponse
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class AdminUsersByFilterResponse(
-    val count: Int,
+    val count: Long,
     val next: String?,
     val previous: String?,
     val results:
@@ -20,8 +19,8 @@ data class AdminUsersByFilterResults(
     @SerialName("filter_type")
     val filterType: String?,
 
-    val count: Int,
+    val count: Long,
 
     val users:
-    List<AccountResponse>
+    List<AdminFilteredUserResponse>
 )

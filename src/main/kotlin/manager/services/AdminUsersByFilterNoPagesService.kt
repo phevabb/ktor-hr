@@ -1,8 +1,9 @@
-package com.hr.superadmin.services
+package com.hr.manager.services
 
 import com.hr.auth.repositories.AuthRepository
-import com.hr.superadmin.dtos.AdminUsersByFilterNoPagesResponse
-import com.hr.superadmin.repositories.AdminUsersByFilterRepository
+import com.hr.manager.dtos.AdminUsersByFilterNoPagesResponse
+import com.hr.manager.repositories.AdminUsersByFilterRepository
+
 
 object AdminUsersByFilterNoPagesService {
 

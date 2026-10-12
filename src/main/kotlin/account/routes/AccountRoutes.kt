@@ -58,8 +58,46 @@ fun Route.accountRoutes() {
             call.request
                 .queryParameters["search"]
                 ?.trim()
-                ?.takeIf { searchValue ->
-                    searchValue.isNotBlank()
+                ?.takeIf { value ->
+                    value.isNotBlank()
+                }
+
+        val role =
+            call.request
+                .queryParameters["role"]
+                ?.trim()
+                ?.takeIf { value ->
+                    value.isNotBlank()
+                }
+
+        val status =
+            call.request
+                .queryParameters["status"]
+                ?.trim()
+                ?.lowercase()
+                ?.takeIf { value ->
+                    value == "active" ||
+                            value == "inactive"
+                }
+
+        val staff =
+            call.request
+                .queryParameters["staff"]
+                ?.trim()
+                ?.lowercase()
+                ?.takeIf { value ->
+                    value == "staff" ||
+                            value == "non-staff"
+                }
+
+        val superuser =
+            call.request
+                .queryParameters["superuser"]
+                ?.trim()
+                ?.lowercase()
+                ?.takeIf { value ->
+                    value == "superuser" ||
+                            value == "regular"
                 }
 
         val page =
@@ -76,7 +114,11 @@ fun Route.accountRoutes() {
                 dbQuery {
                     val totalCount =
                         AccountRepository.countAll(
-                            search = search
+                            search = search,
+                            role = role,
+                            status = status,
+                            staff = staff,
+                            superuser = superuser
                         )
 
                     val totalPages =
@@ -87,7 +129,8 @@ fun Route.accountRoutes() {
                                     totalCount +
                                             pageSize -
                                             1
-                                    ).div(pageSize)
+                                    )
+                                .div(pageSize)
                                 .toInt()
                         }
 
@@ -101,30 +144,88 @@ fun Route.accountRoutes() {
                         AccountRepository.getAllPage(
                             page = safePage,
                             pageSize = pageSize,
-                            search = search
+                            search = search,
+                            role = role,
+                            status = status,
+                            staff = staff,
+                            superuser = superuser
                         )
 
-                    val encodedSearch =
-                        search?.let { searchValue ->
+                    val queryParameters =
+                        mutableListOf(
+                            "page_size=$pageSize"
+                        )
+
+                    search?.let { value ->
+                        val encodedValue =
                             java.net.URLEncoder.encode(
-                                searchValue,
+                                value,
                                 Charsets.UTF_8.name()
                             )
-                        }
 
-                    val searchQueryParameter =
-                        encodedSearch
-                            ?.let { encodedValue ->
-                                "&search=$encodedValue"
-                            }
-                            .orEmpty()
+                        queryParameters.add(
+                            "search=$encodedValue"
+                        )
+                    }
+
+                    role?.let { value ->
+                        val encodedValue =
+                            java.net.URLEncoder.encode(
+                                value,
+                                Charsets.UTF_8.name()
+                            )
+
+                        queryParameters.add(
+                            "role=$encodedValue"
+                        )
+                    }
+
+                    status?.let { value ->
+                        val encodedValue =
+                            java.net.URLEncoder.encode(
+                                value,
+                                Charsets.UTF_8.name()
+                            )
+
+                        queryParameters.add(
+                            "status=$encodedValue"
+                        )
+                    }
+
+                    staff?.let { value ->
+                        val encodedValue =
+                            java.net.URLEncoder.encode(
+                                value,
+                                Charsets.UTF_8.name()
+                            )
+
+                        queryParameters.add(
+                            "staff=$encodedValue"
+                        )
+                    }
+
+                    superuser?.let { value ->
+                        val encodedValue =
+                            java.net.URLEncoder.encode(
+                                value,
+                                Charsets.UTF_8.name()
+                            )
+
+                        queryParameters.add(
+                            "superuser=$encodedValue"
+                        )
+                    }
+
+                    val additionalQueryParameters =
+                        queryParameters.joinToString(
+                            separator = "&"
+                        )
 
                     val nextPage =
                         if (safePage < totalPages) {
                             "/api/accounts" +
                                     "?page=${safePage + 1}" +
-                                    "&page_size=$pageSize" +
-                                    searchQueryParameter
+                                    "&$additionalQueryParameters"
                         } else {
                             null
                         }
@@ -133,8 +234,7 @@ fun Route.accountRoutes() {
                         if (safePage > 1) {
                             "/api/accounts" +
                                     "?page=${safePage - 1}" +
-                                    "&page_size=$pageSize" +
-                                    searchQueryParameter
+                                    "&$additionalQueryParameters"
                         } else {
                             null
                         }
@@ -165,8 +265,6 @@ fun Route.accountRoutes() {
             result
         )
     }
-
-
 
 
                             /*

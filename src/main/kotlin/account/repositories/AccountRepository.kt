@@ -24,6 +24,7 @@ import org.jetbrains.exposed.v1.r2dbc.selectAll
 import com.hr.account.dtos.AccountCreateRequest
 import com.hr.account.dtos.AccountListItemResponse
 import com.hr.account.dtos.AccountResponse
+import com.hr.account.dtos.Role
 import com.hr.account.helpers.AccountComputedValues
 import com.hr.account.security.AccountPassword
 import com.hr.account.table.Accounts
@@ -44,6 +45,7 @@ import kotlinx.coroutines.flow.toList
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.compoundAnd
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.neq
@@ -57,34 +59,202 @@ import java.time.LocalDate
 object AccountRepository {
 
 
+    suspend fun getAllPage(
+        page: Int,
+        pageSize: Int,
+        search: String? = null,
+        role: String? = null,
+        status: String? = null,
+        staff: String? = null,
+        superuser: String? = null
+    ): List<AccountListItemResponse> {
+        val normalizedPage =
+            page.coerceAtLeast(1)
 
+        val normalizedPageSize =
+            pageSize.coerceIn(
+                minimumValue = 1,
+                maximumValue = 100
+            )
 
-    suspend fun countAll(
-        search: String? = null
-    ): Long {
-        val normalizedSearch =
-            search
-                ?.trim()
-                ?.takeIf {
-                    it.isNotBlank()
-                }
+        val calculatedOffset =
+            (
+                    normalizedPage - 1
+                    ).toLong() *
+                    normalizedPageSize.toLong()
+
+        val conditions =
+            buildAccountFilterConditions(
+                search = search,
+                role = role,
+                status = status,
+                staff = staff,
+                superuser = superuser
+            )
 
         val query =
             Accounts.selectAll()
 
-        if (normalizedSearch != null) {
+        if (conditions.isNotEmpty()) {
             query.where {
-                buildAccountSearchCondition(
-                    normalizedSearch
+                conditions.compoundAnd()
+            }
+        }
+
+        return query
+            .orderBy(
+                Accounts.id,
+                SortOrder.DESC
+            )
+            .limit(
+                normalizedPageSize
+            )
+            .offset(
+                calculatedOffset
+            )
+            .map { row ->
+                toListItemResponse(
+                    row
                 )
+            }
+            .toList()
+    }
+
+
+    suspend fun countAll(
+        search: String? = null,
+        role: String? = null,
+        status: String? = null,
+        staff: String? = null,
+        superuser: String? = null
+    ): Long {
+        val conditions =
+            buildAccountFilterConditions(
+                search = search,
+                role = role,
+                status = status,
+                staff = staff,
+                superuser = superuser
+            )
+
+        val query =
+            Accounts.selectAll()
+
+        if (conditions.isNotEmpty()) {
+            query.where {
+                conditions.compoundAnd()
             }
         }
 
         return query.count()
     }
 
+    private fun buildAccountFilterConditions(
+        search: String?,
+        role: String?,
+        status: String?,
+        staff: String?,
+        superuser: String?
+    ): List<Op<Boolean>> {
+        val conditions =
+            mutableListOf<Op<Boolean>>()
 
+        val normalizedSearch =
+            search
+                ?.trim()
+                ?.takeIf { value ->
+                    value.isNotBlank()
+                }
 
+        if (normalizedSearch != null) {
+            conditions.add(
+                buildAccountSearchCondition(
+                    normalizedSearch
+                )
+            )
+        }
+
+        val normalizedRole =
+            role
+                ?.trim()
+                ?.takeIf { value ->
+                    value.isNotBlank()
+                }
+
+        if (normalizedRole != null) {
+            val roleValue =
+                Role.values().firstOrNull {
+                        accountRole ->
+
+                    accountRole.name.equals(
+                        other = normalizedRole,
+                        ignoreCase = true
+                    )
+                }
+
+            if (roleValue != null) {
+                conditions.add(
+                    Accounts.role eq roleValue
+                )
+            }
+        }
+
+        when (
+            status
+                ?.trim()
+                ?.lowercase()
+        ) {
+            "active" -> {
+                conditions.add(
+                    Accounts.isActive eq true
+                )
+            }
+
+            "inactive" -> {
+                conditions.add(
+                    Accounts.isActive eq false
+                )
+            }
+        }
+
+        when (
+            staff
+                ?.trim()
+                ?.lowercase()
+        ) {
+            "staff" -> {
+                conditions.add(
+                    Accounts.isStaff eq true
+                )
+            }
+
+            "non-staff" -> {
+                conditions.add(
+                    Accounts.isStaff eq false
+                )
+            }
+        }
+
+        when (
+            superuser
+                ?.trim()
+                ?.lowercase()
+        ) {
+            "superuser" -> {
+                conditions.add(
+                    Accounts.isSuperuser eq true
+                )
+            }
+
+            "regular" -> {
+                conditions.add(
+                    Accounts.isSuperuser eq false
+                )
+            }
+        }
+
+        return conditions
+    }
 
 
 
@@ -185,76 +355,6 @@ object AccountRepository {
 
 
 
-    suspend fun getAllPage(
-        page: Int,
-        pageSize: Int,
-        search: String? = null
-    ): List<AccountListItemResponse> {
-        val normalizedPage =
-            page.coerceAtLeast(1)
-
-        val normalizedPageSize =
-            pageSize.coerceIn(
-                minimumValue = 1,
-                maximumValue = 100
-            )
-
-        val calculatedOffset =
-            (
-                    normalizedPage - 1
-                    ).toLong() *
-                    normalizedPageSize.toLong()
-
-        val normalizedSearch =
-            search
-                ?.trim()
-                ?.takeIf {
-                    it.isNotBlank()
-                }
-
-        println(
-            "Retrieving account page"
-        )
-
-        println(
-            "Page: $normalizedPage"
-        )
-
-        println(
-            "Page size: $normalizedPageSize"
-        )
-
-        println(
-            "Search: ${normalizedSearch ?: "None"}"
-        )
-
-        val query =
-            Accounts.selectAll()
-
-        if (normalizedSearch != null) {
-            query.where {
-                buildAccountSearchCondition(
-                    normalizedSearch
-                )
-            }
-        }
-
-        return query
-            .orderBy(
-                Accounts.id,
-                SortOrder.DESC
-            )
-            .limit(
-                normalizedPageSize
-            )
-            .offset(
-                calculatedOffset
-            )
-            .map { row ->
-                toListItemResponse(row)
-            }
-            .toList()
-    }
 
 
 
@@ -1163,7 +1263,7 @@ object AccountRepository {
         )
     }
 
-    private suspend fun findDirectorateName(
+    suspend fun findDirectorateName(
         directorateId: Int?
     ): String? {
         if (directorateId == null) {
@@ -1183,7 +1283,7 @@ object AccountRepository {
     }
 
 
-    private suspend fun findCategoryName(
+    suspend fun findCategoryName(
         categoryId: Int?
     ): String? {
         if (categoryId == null) {
@@ -1202,7 +1302,7 @@ object AccountRepository {
             )
     }
 
-    private suspend fun findDistrictName(
+    suspend fun findDistrictName(
         districtId: Int?
     ): String? {
         if (districtId == null) {
@@ -1221,7 +1321,7 @@ object AccountRepository {
             )
     }
 
-    private suspend fun findRegionName(
+    suspend fun findRegionName(
         regionId: Int?
     ): String? {
         if (regionId == null) {
@@ -1303,7 +1403,7 @@ object AccountRepository {
 
 
 
-    private suspend fun findManagementUnitName(
+    suspend fun findManagementUnitName(
         managementUnitId: Int?
     ): String? {
         if (managementUnitId == null) {
@@ -1342,7 +1442,7 @@ object AccountRepository {
             )
     }
 
-    private suspend fun findOnLeaveTypeName(
+    suspend fun findOnLeaveTypeName(
         onLeaveTypeId: Int?
     ): String? {
         if (onLeaveTypeId == null) {

@@ -1,6 +1,7 @@
-package com.hr.superadmin.services
+package com.hr.manager.services
 
-import com.hr.superadmin.dtos.AdminUsersByFilterResponse
+import com.hr.manager.dtos.AdminUsersByFilterResponse
+
 
 sealed interface AdminUsersByFilterResult {
 

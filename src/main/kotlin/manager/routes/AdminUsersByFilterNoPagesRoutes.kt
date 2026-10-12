@@ -1,9 +1,10 @@
-package com.hr.superadmin.routes
+package com.hr.manager.routes
 
 import com.hr.auth.models.AuthPrincipal
 import com.hr.config.DatabaseFactory.dbQuery
-import com.hr.superadmin.services.AdminUsersByFilterNoPagesResult
-import com.hr.superadmin.services.AdminUsersByFilterNoPagesService
+import com.hr.manager.services.AdminUsersByFilterNoPagesResult
+import com.hr.manager.services.AdminUsersByFilterNoPagesService
+
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.principal
 import io.ktor.server.response.respond

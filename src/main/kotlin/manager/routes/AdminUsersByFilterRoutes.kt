@@ -1,9 +1,9 @@
-package com.hr.superadmin.routes
+package com.hr.manager.routes
 
 import com.hr.auth.models.AuthPrincipal
 import com.hr.config.DatabaseFactory.dbQuery
-import com.hr.superadmin.services.AdminUsersByFilterResult
-import com.hr.superadmin.services.AdminUsersByFilterService
+import com.hr.manager.services.AdminUsersByFilterResult
+import com.hr.manager.services.AdminUsersByFilterService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.principal
 import io.ktor.server.response.respond
@@ -11,50 +11,17 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 
 fun Route.adminUsersByFilterRoutes() {
+
     get("/users-per-department/admin") {
-        println(
-            "=================================================="
-        )
-
-        println(
-            "GET /api/superadmin/users-per-department request received"
-        )
-
         val principal =
             call.principal<AuthPrincipal>()
-                ?: run {
-                    println(
-                        "Admin users-by-filter request rejected"
+                ?: return@get call.respond(
+                    HttpStatusCode.Unauthorized,
+                    mapOf(
+                        "detail" to
+                                "Authentication is required."
                     )
-
-                    println(
-                        "Reason: Authentication is required"
-                    )
-
-                    println(
-                        "=================================================="
-                    )
-
-                    return@get call.respond(
-                        HttpStatusCode.Unauthorized,
-                        mapOf(
-                            "detail" to
-                                    "Authentication is required."
-                        )
-                    )
-                }
-
-        println(
-            "Authenticated account ID: ${principal.accountId}"
-        )
-
-        println(
-            "Authenticated user ID: ${principal.userId}"
-        )
-
-        println(
-            "Authenticated JWT role: ${principal.role}"
-        )
+                )
 
         val requestedFilter =
             call.request
@@ -62,39 +29,28 @@ fun Route.adminUsersByFilterRoutes() {
                 ?.trim()
                 ?: ""
 
-        val page =
+        val requestedPage =
             call.request
                 .queryParameters["page"]
                 ?.toIntOrNull()
-                ?.coerceAtLeast(
-                    1
-                )
                 ?: 1
 
-        val pageSize =
+        val requestedPageSize =
             call.request
                 .queryParameters["page_size"]
                 ?.toIntOrNull()
-                ?.coerceIn(
-                    minimumValue =
-                        1,
-
-                    maximumValue =
-                        100
-                )
                 ?: 10
 
-        println(
-            "Requested filter: $requestedFilter"
-        )
+        val page =
+            requestedPage.coerceAtLeast(
+                minimumValue = 1
+            )
 
-        println(
-            "Requested page: $page"
-        )
-
-        println(
-            "Requested page size: $pageSize"
-        )
+        val pageSize =
+            requestedPageSize.coerceIn(
+                minimumValue = 1,
+                maximumValue = 100
+            )
 
         val result =
             try {
@@ -114,71 +70,26 @@ fun Route.adminUsersByFilterRoutes() {
                                 pageSize,
 
                             requestPath =
-                                "/api/superadmin/users-per-department"
+                                "/api/superadmin/users-per-department/admin"
                         )
                 }
-            } catch (exception: Exception) {
-                println(
-                    "Unable to process Admin users-by-filter request"
-                )
-
-                println(
-                    "Error type: ${exception::class.simpleName}"
-                )
-
-                println(
-                    "Error message: ${exception.message}"
-                )
-
-                exception.cause?.let { cause ->
-                    println(
-                        "Cause type: ${cause::class.simpleName}"
-                    )
-
-                    println(
-                        "Cause message: ${cause.message}"
-                    )
-                }
-
-                println(
-                    "=================================================="
-                )
-
+            } catch (
+                exception: Exception
+            ) {
                 return@get call.respond(
                     HttpStatusCode.InternalServerError,
                     mapOf(
                         "detail" to
-                                "Filtered users could not be retrieved."
+                                (
+                                        exception.message
+                                            ?: "Filtered users could not be retrieved."
+                                        )
                     )
                 )
             }
 
         when (result) {
             is AdminUsersByFilterResult.Success -> {
-                println(
-                    "Admin paginated filtered users returned successfully"
-                )
-
-                println(
-                    "Filter: ${result.response.results.dept}"
-                )
-
-                println(
-                    "Filter type: ${result.response.results.filterType}"
-                )
-
-                println(
-                    "Total matching users: ${result.response.count}"
-                )
-
-                println(
-                    "Users returned: ${result.response.results.users.size}"
-                )
-
-                println(
-                    "=================================================="
-                )
-
                 call.respond(
                     HttpStatusCode.OK,
                     result.response
@@ -186,18 +97,6 @@ fun Route.adminUsersByFilterRoutes() {
             }
 
             AdminUsersByFilterResult.AccountNotFound -> {
-                println(
-                    "Authenticated Admin account was not found"
-                )
-
-                println(
-                    "Account ID: ${principal.accountId}"
-                )
-
-                println(
-                    "=================================================="
-                )
-
                 call.respond(
                     HttpStatusCode.NotFound,
                     mapOf(
@@ -208,18 +107,6 @@ fun Route.adminUsersByFilterRoutes() {
             }
 
             AdminUsersByFilterResult.AccountInactive -> {
-                println(
-                    "Inactive Admin attempted to retrieve filtered users"
-                )
-
-                println(
-                    "Account ID: ${principal.accountId}"
-                )
-
-                println(
-                    "=================================================="
-                )
-
                 call.respond(
                     HttpStatusCode.Forbidden,
                     mapOf(
@@ -230,22 +117,6 @@ fun Route.adminUsersByFilterRoutes() {
             }
 
             AdminUsersByFilterResult.AccessDenied -> {
-                println(
-                    "Admin users-by-filter access denied"
-                )
-
-                println(
-                    "Account ID: ${principal.accountId}"
-                )
-
-                println(
-                    "JWT role: ${principal.role}"
-                )
-
-                println(
-                    "=================================================="
-                )
-
                 call.respond(
                     HttpStatusCode.Forbidden,
                     mapOf(
@@ -256,14 +127,6 @@ fun Route.adminUsersByFilterRoutes() {
             }
 
             AdminUsersByFilterResult.FilterRequired -> {
-                println(
-                    "Admin users-by-filter request has no filter"
-                )
-
-                println(
-                    "=================================================="
-                )
-
                 call.respond(
                     HttpStatusCode.BadRequest,
                     mapOf(
@@ -276,18 +139,6 @@ fun Route.adminUsersByFilterRoutes() {
             }
 
             AdminUsersByFilterResult.Failed -> {
-                println(
-                    "Admin users-by-filter service failed"
-                )
-
-                println(
-                    "Account ID: ${principal.accountId}"
-                )
-
-                println(
-                    "=================================================="
-                )
-
                 call.respond(
                     HttpStatusCode.InternalServerError,
                     mapOf(

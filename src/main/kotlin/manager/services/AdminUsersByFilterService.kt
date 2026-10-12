@@ -1,14 +1,11 @@
-package com.hr.superadmin.services
+package com.hr.manager.services
 
 import com.hr.auth.repositories.AuthRepository
-import com.hr.superadmin.dtos.AdminUsersByFilterResponse
-import com.hr.superadmin.dtos.AdminUsersByFilterResults
-import com.hr.superadmin.repositories.AdminUsersByFilterRepository
+import com.hr.manager.dtos.AdminUsersByFilterResponse
+import com.hr.manager.dtos.AdminUsersByFilterResults
+import com.hr.manager.repositories.AdminUsersByFilterRepository
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import kotlin.math.ceil
-import kotlin.math.max
-import kotlin.math.min
 
 object AdminUsersByFilterService {
 
@@ -19,165 +16,58 @@ object AdminUsersByFilterService {
         pageSize: Int,
         requestPath: String
     ): AdminUsersByFilterResult {
-        println(
-            "=================================================="
-        )
-
-        println(
-            "Admin paginated users-by-filter service started"
-        )
-
-        println(
-            "Authenticated account ID: $adminAccountId"
-        )
-
-        println(
-            "Requested filter: $requestedFilter"
-        )
-
-        println(
-            "Requested page: $page"
-        )
-
-        println(
-            "Requested page size: $pageSize"
-        )
-
         val cleanFilter =
             requestedFilter.trim()
 
         if (cleanFilter.isBlank()) {
-            println(
-                "Admin users-by-filter request rejected"
-            )
-
-            println(
-                "Reason: dept filter is blank"
-            )
-
-            println(
-                "=================================================="
-            )
-
             return AdminUsersByFilterResult
                 .FilterRequired
         }
 
         val account =
             try {
-                AuthRepository
-                    .findAccountById(
-                        adminAccountId
-                    )
-            } catch (exception: Exception) {
-                println(
-                    "Unable to retrieve authenticated Admin account"
+                AuthRepository.findAccountById(
+                    adminAccountId
                 )
-
+            } catch (
+                exception: Exception
+            ) {
                 printExceptionDetails(
                     exception
-                )
-
-                println(
-                    "=================================================="
                 )
 
                 return AdminUsersByFilterResult
                     .Failed
             }
-                ?: run {
-                    println(
-                        "Authenticated Admin account was not found"
-                    )
-
-                    println(
-                        "Account ID: $adminAccountId"
-                    )
-
-                    println(
-                        "=================================================="
-                    )
-
-                    return AdminUsersByFilterResult
-                        .AccountNotFound
-                }
-
-        println(
-            "Authenticated account was found"
-        )
-
-        println(
-            "Authenticated account ID: ${account.id}"
-        )
-
-        println(
-            "Authenticated user ID: ${account.userId}"
-        )
-
-        println(
-            "Authenticated account role: ${account.role}"
-        )
-
-        println(
-            "Authenticated account active: ${account.isActive}"
-        )
+                ?: return AdminUsersByFilterResult
+                    .AccountNotFound
 
         if (!account.isActive) {
-            println(
-                "Admin users-by-filter request rejected"
-            )
-
-            println(
-                "Reason: Authenticated account is inactive"
-            )
-
-            println(
-                "=================================================="
-            )
-
             return AdminUsersByFilterResult
                 .AccountInactive
         }
 
         val accountIsAdmin =
             account.role.equals(
-                other =
-                    "Admin",
-
-                ignoreCase =
-                    true
+                other = "Admin",
+                ignoreCase = true
             )
-
-        println(
-            "Authenticated account has Admin role: $accountIsAdmin"
-        )
 
         if (!accountIsAdmin) {
-            println(
-                "Admin users-by-filter request rejected"
-            )
-
-            println(
-                "Reason: Authenticated account is not an Admin"
-            )
-
-            println(
-                "Current role: ${account.role}"
-            )
-
-            println(
-                "=================================================="
-            )
-
             return AdminUsersByFilterResult
                 .AccessDenied
         }
 
-        return try {
-            println(
-                "Retrieving matching active users across all regions"
+        val safePageSize =
+            pageSize.coerceIn(
+                minimumValue = 1,
+                maximumValue = 100
             )
 
+        val requestedPage =
+            page.coerceAtLeast(1)
+
+        return try {
             val repositoryResult =
                 AdminUsersByFilterRepository
                     .getUsersByFilter(
@@ -188,74 +78,57 @@ object AdminUsersByFilterService {
             val allUsers =
                 repositoryResult.users
 
-            val safePageSize =
-                pageSize.coerceIn(
-                    minimumValue =
-                        1,
-
-                    maximumValue =
-                        100
-                )
-
-            val totalRecords =
-                allUsers.size
+            val totalCount =
+                allUsers.size.toLong()
 
             val totalPages =
-                if (totalRecords == 0) {
-                    1
-                } else {
-                    max(
-                        1,
-                        ceil(
-                            totalRecords.toDouble() /
-                                    safePageSize.toDouble()
-                        ).toInt()
-                    )
-                }
+                calculateTotalPages(
+                    totalCount = totalCount,
+                    pageSize = safePageSize
+                )
 
             val safePage =
-                page.coerceIn(
-                    minimumValue =
-                        1,
-
-                    maximumValue =
-                        totalPages
+                requestedPage.coerceIn(
+                    minimumValue = 1,
+                    maximumValue = totalPages
                 )
 
             val startIndex =
                 (
-                        (safePage - 1) *
-                                safePageSize
-                        ).coerceAtMost(
-                        totalRecords
-                    )
+                        safePage - 1
+                        ) * safePageSize
+
+            val safeStartIndex =
+                startIndex.coerceAtMost(
+                    allUsers.size
+                )
 
             val endIndex =
-                min(
-                    startIndex +
-                            safePageSize,
-
-                    totalRecords
-                )
+                (
+                        safeStartIndex +
+                                safePageSize
+                        ).coerceAtMost(
+                        allUsers.size
+                    )
 
             val pageUsers =
                 if (
-                    startIndex <
+                    safeStartIndex <
                     endIndex
                 ) {
                     allUsers.subList(
-                        startIndex,
-                        endIndex
+                        fromIndex =
+                            safeStartIndex,
+
+                        toIndex =
+                            endIndex
                     )
                 } else {
                     emptyList()
                 }
 
             val nextPageUrl =
-                if (
-                    safePage <
-                    totalPages
-                ) {
+                if (safePage < totalPages) {
                     buildPageUrl(
                         requestPath =
                             requestPath,
@@ -274,9 +147,7 @@ object AdminUsersByFilterService {
                 }
 
             val previousPageUrl =
-                if (
-                    safePage > 1
-                ) {
+                if (safePage > 1) {
                     buildPageUrl(
                         requestPath =
                             requestPath,
@@ -297,7 +168,7 @@ object AdminUsersByFilterService {
             val response =
                 AdminUsersByFilterResponse(
                     count =
-                        totalRecords,
+                        totalCount,
 
                     next =
                         nextPageUrl,
@@ -314,89 +185,45 @@ object AdminUsersByFilterService {
                                 repositoryResult.filterType,
 
                             count =
-                                totalRecords,
+                                totalCount,
 
                             users =
                                 pageUsers
                         )
                 )
 
-            println(
-                "Admin paginated users-by-filter completed successfully"
-            )
-
-            println(
-                "Admin account ID: $adminAccountId"
-            )
-
-            println(
-                "Requested filter: $cleanFilter"
-            )
-
-            println(
-                "Filter type: ${repositoryResult.filterType ?: "None"}"
-            )
-
-            println(
-                "Total matching users: $totalRecords"
-            )
-
-            println(
-                "Current page: $safePage"
-            )
-
-            println(
-                "Page size: $safePageSize"
-            )
-
-            println(
-                "Total pages: $totalPages"
-            )
-
-            println(
-                "Users returned: ${pageUsers.size}"
-            )
-
-            println(
-                "Next page URL: ${nextPageUrl ?: "None"}"
-            )
-
-            println(
-                "Previous page URL: ${previousPageUrl ?: "None"}"
-            )
-
-            println(
-                "=================================================="
-            )
-
             AdminUsersByFilterResult.Success(
                 response =
                     response
             )
-        } catch (exception: Exception) {
-            println(
-                "Admin paginated users-by-filter failed"
-            )
-
-            println(
-                "Admin account ID: $adminAccountId"
-            )
-
-            println(
-                "Requested filter: $cleanFilter"
-            )
-
+        } catch (
+            exception: Exception
+        ) {
             printExceptionDetails(
                 exception
-            )
-
-            println(
-                "=================================================="
             )
 
             AdminUsersByFilterResult
                 .Failed
         }
+    }
+
+    private fun calculateTotalPages(
+        totalCount: Long,
+        pageSize: Int
+    ): Int {
+        if (totalCount <= 0L) {
+            return 1
+        }
+
+        return (
+                (
+                        totalCount +
+                                pageSize.toLong() -
+                                1L
+                        ) /
+                        pageSize.toLong()
+                ).toInt()
     }
 
     private fun buildPageUrl(
@@ -437,11 +264,13 @@ object AdminUsersByFilterService {
 
         while (currentCause != null) {
             println(
-                "Cause $causeLevel type: ${currentCause::class.simpleName}"
+                "Cause $causeLevel type: " +
+                        "${currentCause::class.simpleName}"
             )
 
             println(
-                "Cause $causeLevel message: ${currentCause.message}"
+                "Cause $causeLevel message: " +
+                        "${currentCause.message}"
             )
 
             currentCause =
