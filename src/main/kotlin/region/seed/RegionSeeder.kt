@@ -1,55 +1,97 @@
-package com.hr.region.seeder
+package com.hr.region.seed
+
 
 import com.hr.config.DatabaseFactory.dbQuery
 import com.hr.region.tables.Regions
-import kotlinx.coroutines.runBlocking
-import org.jetbrains.exposed.v1.core.insert
-import org.jetbrains.exposed.v1.core.selectAll
-import org.jetbrains.exposed.v1.r2dbc.insert
+import org.jetbrains.exposed.v1.r2dbc.batchInsert
 
 object RegionSeeder {
 
-    fun seed() = runBlocking {
+    suspend fun seed() {
+        val regions =
+            try {
+                readRegionsFromResource()
+            } catch (exception: Exception) {
+                println(
+                    "Region seeding failed: ${exception.message}"
+                )
 
-        val regions = listOf(
-            "Ahafo",
-            "Ashanti",
-            "Bono",
-            "Bono East",
-            "Central",
-            "Eastern",
-            "Greater Accra",
-            "North East",
-            "Northern",
-            "Oti",
-            "Savannah",
-            "Upper East",
-            "Upper West",
-            "Volta",
-            "Western",
-            "Western North"
-        )
-
-        dbQuery {
-
-            val existingRegions = Regions
-                .selectAll()
-                .map { it[Regions.region] }
-                .toSet()
-
-            regions.forEach { regionName ->
-
-                if (!existingRegions.contains(regionName)) {
-
-                    Regions.insert {
-                        it[region] = regionName
-                    }
-
-                    println("Inserted region: $regionName")
-                }
+                return
             }
+
+        if (regions.isEmpty()) {
+            println(
+                "Region seeding skipped: region.txt is empty"
+            )
+
+            return
         }
 
-        println("Region seeding completed.")
+        try {
+            val insertedRows =
+                dbQuery {
+                    Regions.batchInsert(
+                        data = regions,
+                        ignore = true,
+                        shouldReturnGeneratedValues = false
+                    ) { regionName ->
+                        this[
+                            Regions.region
+                        ] = regionName
+                    }
+                }
+
+            println(
+                "Region seeding completed: " +
+                        "${insertedRows.size} row(s) inserted"
+            )
+        } catch (exception: Exception) {
+            println(
+                "Region seeding failed: ${exception.message}"
+            )
+
+            exception.printStackTrace()
+        }
+    }
+
+    private fun readRegionsFromResource():
+            List<String> {
+
+        val resourcePath =
+            "data/region.txt"
+
+        val inputStream =
+            RegionSeeder::class.java
+                .classLoader
+                .getResourceAsStream(
+                    resourcePath
+                )
+                ?: throw IllegalStateException(
+                    "Resource file not found: $resourcePath"
+                )
+
+        return inputStream
+            .bufferedReader(
+                Charsets.UTF_8
+            )
+            .useLines { lines ->
+                lines
+                    .map { line ->
+                        line.trim()
+                    }
+                    .filter { line ->
+                        line.isNotBlank()
+                    }
+                    .filterNot { line ->
+                        line.startsWith("#")
+                    }
+                    .filter { line ->
+                        line.length <= 120
+                    }
+                    .distinctBy { line ->
+                        line.lowercase()
+                    }
+                    .toList()
+            }
     }
 }

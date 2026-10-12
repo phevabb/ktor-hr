@@ -1,0 +1,58 @@
+ACCOUNT IMPORT LOG
+Started: 2026-10-12T04:39:07.056184400
+========================================
+
+========================================
+STAFF EXCEL IMPORT STARTING
+========================================
+Working directory: C:\Users\pheva\Desktop\KOTLIN_android\acode\ktor-hr
+Excel file path: C:\Users\pheva\Desktop\KOTLIN_android\acode\ktor-hr\src\main\kotlin\account\importer\staff_data.xlsx
+Excel file exists: true
+Excel path is a file: true
+Initializing database connection...
+Database connection initialized.
+Starting Excel account import...
+
+========================================
+STAFF EXCEL IMPORT FAILED
+========================================
+Error type: java.io.FileNotFoundException
+Error message: C:\Users\pheva\Desktop\KOTLIN_android\acode\ktor-hr\src\main\kotlin\account\importer\staff_data.xlsx (The process cannot access the file because it is being used by another process)
+
+COMPLETE STACK TRACE
+----------------------------------------
+java.io.FileNotFoundException: C:\Users\pheva\Desktop\KOTLIN_android\acode\ktor-hr\src\main\kotlin\account\importer\staff_data.xlsx (The process cannot access the file because it is being used by another process)
+	at java.base/java.io.FileOutputStream.open0(Native Method)
+	at java.base/java.io.FileOutputStream.open(FileOutputStream.java:289)
+	at java.base/java.io.FileOutputStream.<init>(FileOutputStream.java:230)
+	at java.base/java.io.FileOutputStream.<init>(FileOutputStream.java:179)
+	at org.apache.poi.openxml4j.opc.internal.FileHelper.copyFile(FileHelper.java:65)
+	at org.apache.poi.openxml4j.opc.ZipPackage.closeImpl(ZipPackage.java:589)
+	at org.apache.poi.openxml4j.opc.OPCPackage.close(OPCPackage.java:671)
+	at org.apache.poi.ooxml.POIXMLDocument.close(POIXMLDocument.java:189)
+	at org.apache.poi.xssf.usermodel.XSSFWorkbook.close(XSSFWorkbook.java:642)
+	at kotlin.io.CloseableKt.closeFinally(Closeable.kt:47)
+	at com.hr.account.importer.ExcelAccountImporter.importExcel(ExcelAccountImporter.kt:74)
+	at com.hr.account.importer.ExcelAccountImporter$importExcel$1.invokeSuspend(ExcelAccountImporter.kt)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.UndispatchedCoroutine.afterResume(CoroutineContext.kt:278)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:101)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:47)
+	at kotlinx.coroutines.UndispatchedCoroutine.afterResume(CoroutineContext.kt:278)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:101)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:47)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)
+	at kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)
+	at kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)
+	at kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source)
+	at com.hr.account.importer.ImportAccountsMainKt.main(ImportAccountsMain.kt:10)
+	at com.hr.account.importer.ImportAccountsMainKt.main(ImportAccountsMain.kt)
+
+----------------------------------------
+Failed: 2026-10-12T04:44:43.458418200
+========================================

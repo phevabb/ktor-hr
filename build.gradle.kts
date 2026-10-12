@@ -18,9 +18,11 @@ kotlin {
 dependencies {
 
 
-        implementation(
-            "org.eclipse.angus:jakarta.mail:2.0.5"
-        )
+    implementation("org.eclipse.angus:jakarta.mail:2.0.5")
+    implementation("org.apache.poi:poi:5.4.1")
+    implementation("org.apache.poi:poi-ooxml:5.4.1")
+
+
 
     implementation(ktorLibs.client.apache)
     implementation(ktorLibs.client.core)

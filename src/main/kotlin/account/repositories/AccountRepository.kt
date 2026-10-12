@@ -2,6 +2,13 @@ package com.hr.account.repositories
 
 
 
+import java.time.Period
+
+
+import org.jetbrains.exposed.v1.core.LowerCase
+import org.jetbrains.exposed.v1.core.Op
+import org.jetbrains.exposed.v1.core.compoundOr
+import org.jetbrains.exposed.v1.core.like
 
 
 import com.hr.academicqualification.table.AcademicQualifications
@@ -48,6 +55,511 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 object AccountRepository {
+
+
+
+
+    suspend fun countAll(
+        search: String? = null
+    ): Long {
+        val normalizedSearch =
+            search
+                ?.trim()
+                ?.takeIf {
+                    it.isNotBlank()
+                }
+
+        val query =
+            Accounts.selectAll()
+
+        if (normalizedSearch != null) {
+            query.where {
+                buildAccountSearchCondition(
+                    normalizedSearch
+                )
+            }
+        }
+
+        return query.count()
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+    private fun buildAccountSearchCondition(
+        search: String
+    ): Op<Boolean> {
+        val normalizedSearch =
+            search
+                .trim()
+                .lowercase()
+
+        val searchPattern =
+            "%${escapeLikeValue(normalizedSearch)}%"
+
+        val searchConditions = listOf(
+            LowerCase(
+                Accounts.userId
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.firstName
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.middleName
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.lastName
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.maidenName
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.email
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.phoneNumber
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.ghanaCardNumber
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.socialSecurityNumber
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.nationalHealthInsuranceNumber
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.bankAccountNumber
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.bankName
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.bankAccountBranch
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.professionalQualification
+            ) like searchPattern,
+
+            LowerCase(
+                Accounts.supervisorName
+            ) like searchPattern
+        )
+
+        return searchConditions.compoundOr()
+    }
+
+      private fun escapeLikeValue(
+        value: String
+    ): String {
+        return value
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+    }
+
+
+
+
+
+
+
+    suspend fun getAllPage(
+        page: Int,
+        pageSize: Int,
+        search: String? = null
+    ): List<AccountListItemResponse> {
+        val normalizedPage =
+            page.coerceAtLeast(1)
+
+        val normalizedPageSize =
+            pageSize.coerceIn(
+                minimumValue = 1,
+                maximumValue = 100
+            )
+
+        val calculatedOffset =
+            (
+                    normalizedPage - 1
+                    ).toLong() *
+                    normalizedPageSize.toLong()
+
+        val normalizedSearch =
+            search
+                ?.trim()
+                ?.takeIf {
+                    it.isNotBlank()
+                }
+
+        println(
+            "Retrieving account page"
+        )
+
+        println(
+            "Page: $normalizedPage"
+        )
+
+        println(
+            "Page size: $normalizedPageSize"
+        )
+
+        println(
+            "Search: ${normalizedSearch ?: "None"}"
+        )
+
+        val query =
+            Accounts.selectAll()
+
+        if (normalizedSearch != null) {
+            query.where {
+                buildAccountSearchCondition(
+                    normalizedSearch
+                )
+            }
+        }
+
+        return query
+            .orderBy(
+                Accounts.id,
+                SortOrder.DESC
+            )
+            .limit(
+                normalizedPageSize
+            )
+            .offset(
+                calculatedOffset
+            )
+            .map { row ->
+                toListItemResponse(row)
+            }
+            .toList()
+    }
+
+
+
+
+
+
+    fun toListItemResponse(
+        row: ResultRow
+    ): AccountListItemResponse {
+
+        val firstName =
+            row[Accounts.firstName]
+
+        val middleName =
+            row[Accounts.middleName]
+
+        val lastName =
+            row[Accounts.lastName]
+
+        val fullName = listOfNotNull(
+            firstName,
+            middleName,
+            lastName
+        )
+            .map { namePart ->
+                namePart.trim()
+            }
+            .filter { namePart ->
+                namePart.isNotBlank()
+            }
+            .joinToString(" ")
+            .ifBlank {
+                null
+            }
+
+        val dateOfBirth =
+            row[Accounts.dateOfBirth]
+
+        val dateOfFirstAppointment =
+            row[Accounts.dateOfFirstAppointment]
+
+        val dateOfLastPromotion =
+            row[Accounts.dateOfLastPromotion]
+
+        val standardRetirementAge =
+            row[Accounts.standardRetirementAge]
+
+        val today =
+            LocalDate.now()
+
+        val age =
+            dateOfBirth?.let { birthDate ->
+                if (birthDate.isAfter(today)) {
+                    null
+                } else {
+                    Period.between(
+                        birthDate,
+                        today
+                    ).years
+                }
+            }
+
+        val dateOfRetirement =
+            dateOfBirth?.plusYears(
+                standardRetirementAge.toLong()
+            )
+
+        val numberOfYearsInService =
+            dateOfFirstAppointment?.let {
+                    firstAppointmentDate ->
+
+                if (
+                    firstAppointmentDate.isAfter(
+                        today
+                    )
+                ) {
+                    null
+                } else {
+                    Period.between(
+                        firstAppointmentDate,
+                        today
+                    ).years
+                }
+            }
+
+        val yearsOnCurrentGrade =
+            dateOfLastPromotion?.let {
+                    lastPromotionDate ->
+
+                if (
+                    lastPromotionDate.isAfter(
+                        today
+                    )
+                ) {
+                    null
+                } else {
+                    Period.between(
+                        lastPromotionDate,
+                        today
+                    ).years
+                }
+            }
+
+        return AccountListItemResponse(
+            id = row[Accounts.id].value,
+
+            isActive = row[Accounts.isActive],
+            isStaff = row[Accounts.isStaff],
+            isSuperuser = row[Accounts.isSuperuser],
+
+            academicQualificationId =
+                row[Accounts.academicQualificationId]
+                    ?.value,
+
+            userId = row[Accounts.userId],
+
+            professionalQualification =
+                row[Accounts.professionalQualification],
+
+            directorateId =
+                row[Accounts.directorateId]?.value,
+
+            categoryId =
+                row[Accounts.categoryId]?.value,
+
+            districtId =
+                row[Accounts.districtId]?.value,
+
+            regionId =
+                row[Accounts.regionId]?.value,
+
+            currentGradeId =
+                row[Accounts.currentGradeId]?.value,
+
+            nextGradeId =
+                row[Accounts.nextGradeId]?.value,
+
+            changeOfGradeId =
+                row[Accounts.changeOfGradeId]?.value,
+
+            managementUnitCostCentreId =
+                row[
+                    Accounts.managementUnitCostCentreId
+                ]?.value,
+
+            titleId =
+                row[Accounts.titleId]?.value,
+
+            onLeaveTypeId =
+                row[Accounts.onLeaveTypeId]?.value,
+
+            firstName = firstName,
+            lastName = lastName,
+            middleName = middleName,
+
+            maidenName =
+                row[Accounts.maidenName],
+
+            fullName = fullName,
+
+            gender =
+                row[Accounts.gender],
+
+            atPostOnLeave =
+                row[Accounts.atPostOnLeave],
+
+            role =
+                row[Accounts.role],
+
+            dateOfBirth =
+                dateOfBirth?.toString(),
+
+            standardRetirementAge =
+                standardRetirementAge,
+
+            maritalStatus =
+                row[Accounts.maritalStatus],
+
+            professional =
+                row[Accounts.professional],
+
+            staffCategory =
+                row[Accounts.staffCategory],
+
+            fulltimeContractStaff =
+                row[Accounts.fulltimeContractStaff],
+
+            currentSalaryPoint =
+                row[Accounts.currentSalaryPoint],
+
+            currentSalaryLevel =
+                row[Accounts.currentSalaryLevel],
+
+            nextSalaryLevel =
+                row[Accounts.nextSalaryLevel],
+
+            dateOfAssumptionOfDuty =
+                row[Accounts.dateOfAssumptionOfDuty]
+                    ?.toString(),
+
+            substantiveDate =
+                row[Accounts.substantiveDate]
+                    ?.toString(),
+
+            nationalEffectiveDate =
+                row[Accounts.nationalEffectiveDate]
+                    ?.toString(),
+
+            dateOfLastPromotion =
+                dateOfLastPromotion?.toString(),
+
+            dateOfFirstAppointment =
+                dateOfFirstAppointment?.toString(),
+
+            singleSpineMonthlySalary =
+                row[Accounts.singleSpineMonthlySalary]
+                    ?.toPlainString(),
+
+            monthlyGrossPay =
+                row[Accounts.monthlyGrossPay]
+                    ?.toPlainString(),
+
+            annualSalary =
+                row[Accounts.annualSalary]
+                    ?.toPlainString(),
+
+            numberOfFocusAreas =
+                row[Accounts.numberOfFocusAreas],
+
+            numberOfTargets =
+                row[Accounts.numberOfTargets],
+
+            numberOfTargetsMet =
+                row[Accounts.numberOfTargetsMet],
+
+            numberOfTargetsNotMet =
+                row[Accounts.numberOfTargetsNotMet],
+
+            overallAssessmentScore =
+                row[Accounts.overallAssessmentScore]
+                    ?.toPlainString(),
+
+            selfAssessmentDescription =
+                row[Accounts.selfAssessmentDescription],
+
+            phoneNumber =
+                row[Accounts.phoneNumber],
+
+            email =
+                row[Accounts.email],
+
+            ghanaCardNumber =
+                row[Accounts.ghanaCardNumber],
+
+            socialSecurityNumber =
+                row[Accounts.socialSecurityNumber],
+
+            nationalHealthInsuranceNumber =
+                row[
+                    Accounts.nationalHealthInsuranceNumber
+                ],
+
+            bankName =
+                row[Accounts.bankName],
+
+            bankAccountNumber =
+                row[Accounts.bankAccountNumber],
+
+            bankAccountBranch =
+                row[Accounts.bankAccountBranch],
+
+            payrollStatus =
+                row[Accounts.payrollStatus],
+
+            accommodationStatus =
+                row[Accounts.accommodationStatus],
+
+            supervisorName =
+                row[Accounts.supervisorName],
+
+            profilePictureUrl =
+                row[Accounts.profilePictureUrl],
+
+            profilePicturePublicId =
+                row[Accounts.profilePicturePublicId],
+
+            dateJoined =
+                row[Accounts.dateJoined].toString(),
+
+            lastLogin =
+                row[Accounts.lastLogin]?.toString(),
+
+            age = age,
+
+            dateOfRetirement =
+                dateOfRetirement?.toString(),
+
+            numberOfYearsInService =
+                numberOfYearsInService,
+
+            yearsOnCurrentGrade =
+                yearsOnCurrentGrade
+        )
+    }
+
 
 
 
@@ -502,122 +1014,120 @@ object AccountRepository {
 
 
 
-    private fun rowToAccountListItemResponse(
-        row: ResultRow
-    ): AccountListItemResponse {
-        val firstName =
-            row[
-                Accounts.firstName
-            ]
-
-        val middleName =
-            row[
-                Accounts.middleName
-            ]
-
-        val lastName =
-            row[
-                Accounts.lastName
-            ]
-
-        val fullName =
-            AccountComputedValues
-                .fullName(
-                    firstName =
-                        firstName,
-
-                    middleName =
-                        middleName,
-
-                    lastName =
-                        lastName
-                )
-
-        return AccountListItemResponse(
-            id =
-                row[
-                    Accounts.id
-                ].value,
-
-            userId =
-                row[
-                    Accounts.userId
-                ],
-
-            fullName =
-                fullName,
-
-            phoneNumber =
-                row[
-                    Accounts.phoneNumber
-                ],
-
-            email =
-                row[
-                    Accounts.email
-                ],
-
-            role =
-                row[
-                    Accounts.role
-                ]
-                    ?.name,
-
-            gender =
-                row[
-                    Accounts.gender
-                ]
-                    ?.name,
-
-            profilePictureUrl =
-                row[
-                    Accounts.profilePictureUrl
-                ],
-
-            isActive =
-                row[
-                    Accounts.isActive
-                ],
-
-            regionId =
-                row[
-                    Accounts.regionId
-                ]
-                    ?.value,
-
-            districtId =
-                row[
-                    Accounts.districtId
-                ]
-                    ?.value,
-
-            directorateId =
-                row[
-                    Accounts.directorateId
-                ]
-                    ?.value,
-
-            categoryId =
-                row[
-                    Accounts.categoryId
-                ]
-                    ?.value,
-
-            currentGradeId =
-                row[
-                    Accounts.currentGradeId
-                ]
-                    ?.value,
-
-            managementUnitCostCentreId =
-                row[
-                    Accounts.managementUnitCostCentreId
-                ]
-                    ?.value
-        )
-    }
-
-
+//    private fun rowToAccountListItemResponse(
+//        row: ResultRow
+//    ): AccountListItemResponse {
+//        val firstName =
+//            row[
+//                Accounts.firstName
+//            ]
+//
+//        val middleName =
+//            row[
+//                Accounts.middleName
+//            ]
+//
+//        val lastName =
+//            row[
+//                Accounts.lastName
+//            ]
+//
+//        val fullName =
+//            AccountComputedValues
+//                .fullName(
+//                    firstName =
+//                        firstName,
+//
+//                    middleName =
+//                        middleName,
+//
+//                    lastName =
+//                        lastName
+//                )
+//
+//        return AccountListItemResponse(
+//            id =
+//                row[
+//                    Accounts.id
+//                ].value,
+//
+//            userId =
+//                row[
+//                    Accounts.userId
+//                ],
+//
+//            fullName =
+//                fullName,
+//
+//            phoneNumber =
+//                row[
+//                    Accounts.phoneNumber
+//                ],
+//
+//            email =
+//                row[
+//                    Accounts.email
+//                ],
+//
+//            role =
+//                row[
+//                    Accounts.role
+//                ]
+//                    ?.name,
+//
+//            gender =
+//                row[
+//                    Accounts.gender
+//                ]
+//                    ?.name,
+//
+//            profilePictureUrl =
+//                row[
+//                    Accounts.profilePictureUrl
+//                ],
+//
+//            isActive =
+//                row[
+//                    Accounts.isActive
+//                ],
+//
+//            regionId =
+//                row[
+//                    Accounts.regionId
+//                ]
+//                    ?.value,
+//
+//            districtId =
+//                row[
+//                    Accounts.districtId
+//                ]
+//                    ?.value,
+//
+//            directorateId =
+//                row[
+//                    Accounts.directorateId
+//                ]
+//                    ?.value,
+//
+//            categoryId =
+//                row[
+//                    Accounts.categoryId
+//                ]
+//                    ?.value,
+//
+//            currentGradeId =
+//                row[
+//                    Accounts.currentGradeId
+//                ]
+//                    ?.value,
+//
+//            managementUnitCostCentreId =
+//                row[
+//                    Accounts.managementUnitCostCentreId
+//                ]
+//                    ?.value
+//        )
+//    }
 
 
 
@@ -961,34 +1471,26 @@ object AccountRepository {
         return count
     }
 
-
     suspend fun getActivePage(
         page: Int,
         pageSize: Int
     ): List<AccountListItemResponse> {
         val normalizedPage =
-            page.coerceAtLeast(
-                1
-            )
+            page.coerceAtLeast(1)
 
         val normalizedPageSize =
             pageSize.coerceIn(
-                minimumValue =
-                    1,
-
-                maximumValue =
-                    100
+                minimumValue = 1,
+                maximumValue = 100
             )
 
         val calculatedOffset =
             (
-                    normalizedPage -
-                            1
-                    ).toLong() *
-                    normalizedPageSize.toLong()
+                    normalizedPage - 1
+                    ).toLong() * normalizedPageSize.toLong()
 
         println(
-            "Retrieving lightweight active-account page"
+            "Retrieving complete active-account page"
         )
 
         println(
@@ -1010,8 +1512,7 @@ object AccountRepository {
             Accounts
                 .selectAll()
                 .where {
-                    Accounts.isActive eq
-                            true
+                    Accounts.isActive eq true
                 }
                 .orderBy(
                     Accounts.id,
@@ -1024,14 +1525,12 @@ object AccountRepository {
                     calculatedOffset
                 )
                 .map { row ->
-                    rowToAccountListItemResponse(
-                        row
-                    )
+                    toListItemResponse(row)
                 }
                 .toList()
 
         println(
-            "Lightweight active-account page retrieved"
+            "Complete active-account page retrieved"
         )
 
         println(
@@ -1040,13 +1539,13 @@ object AccountRepository {
 
         println(
             "Retrieval duration: ${
-                System.currentTimeMillis() -
-                        startedAt
+                System.currentTimeMillis() - startedAt
             } ms"
         )
 
         return accounts
     }
+
 
     suspend fun getAll(): List<AccountResponse> {
         return Accounts
@@ -1124,7 +1623,7 @@ object AccountRepository {
                 request.categoryId?.let { categoryId ->
                     EntityID(
                         categoryId,
-                        StaffClasses
+                        Classes
                     )
                 }
 
@@ -1428,13 +1927,12 @@ object AccountRepository {
                         }
 
                 it[Accounts.categoryId] =
-                    request.categoryId
-                        ?.let { categoryId ->
-                            EntityID(
-                                categoryId,
-                                StaffClasses
-                            )
-                        }
+                    request.categoryId?.let { categoryId ->
+                        EntityID(
+                            categoryId,
+                            Classes
+                        )
+                    }
 
                 it[Accounts.districtId] =
                     request.districtId
@@ -1789,6 +2287,15 @@ object AccountRepository {
     }
 
 }
+
+
+
+
+
+
+
+
+
 
 
 

@@ -41,297 +41,137 @@ fun Route.accountRoutes() {
      * Get all accounts
      */
 
-
-
     get {
-        println(
-            "=================================================="
-        )
-
-        println(
-            "GET /api/accounts request received"
-        )
-
         val requestedPage =
             call.request
-                .queryParameters[
-                "page"
-            ]
+                .queryParameters["page"]
                 ?.toIntOrNull()
                 ?: 1
 
         val requestedPageSize =
             call.request
-                .queryParameters[
-                "page_size"
-            ]
+                .queryParameters["page_size"]
                 ?.toIntOrNull()
                 ?: 10
 
+        val search =
+            call.request
+                .queryParameters["search"]
+                ?.trim()
+                ?.takeIf { searchValue ->
+                    searchValue.isNotBlank()
+                }
+
         val page =
-            requestedPage.coerceAtLeast(
-                1
-            )
+            requestedPage.coerceAtLeast(1)
 
         val pageSize =
             requestedPageSize.coerceIn(
-                minimumValue =
-                    1,
-
-                maximumValue =
-                    100
+                minimumValue = 1,
+                maximumValue = 100
             )
-
-        println(
-            "Requested page: $page"
-        )
-
-        println(
-            "Requested page size: $pageSize"
-        )
-
-        val requestStartedAt =
-            System.currentTimeMillis()
 
         val result =
             try {
                 dbQuery {
-                    println(
-                        "Database transaction started"
-                    )
-
-                    val countStartedAt =
-                        System.currentTimeMillis()
-
-                    println(
-                        "Counting active accounts"
-                    )
-
                     val totalCount =
-                        AccountRepository
-                            .countActive()
-
-                    println(
-                        "Active-account count completed"
-                    )
-
-                    println(
-                        "Active account count: $totalCount"
-                    )
-
-                    println(
-                        "Count duration: ${
-                            System.currentTimeMillis() -
-                                    countStartedAt
-                        } ms"
-                    )
+                        AccountRepository.countAll(
+                            search = search
+                        )
 
                     val totalPages =
-                        if (
-                            totalCount ==
-                            0L
-                        ) {
+                        if (totalCount == 0L) {
                             1
                         } else {
                             (
-                                    (
-                                            totalCount +
-                                                    pageSize -
-                                                    1
-                                            ) /
-                                            pageSize
-                                    ).toInt()
+                                    totalCount +
+                                            pageSize -
+                                            1
+                                    ).div(pageSize)
+                                .toInt()
                         }
 
                     val safePage =
-                        page.coerceAtMost(
-                            totalPages
+                        page.coerceIn(
+                            minimumValue = 1,
+                            maximumValue = totalPages
                         )
 
-                    println(
-                        "Total pages: $totalPages"
-                    )
-
-                    println(
-                        "Safe page: $safePage"
-                    )
-
-                    val pageQueryStartedAt =
-                        System.currentTimeMillis()
-
-                    println(
-                        "Retrieving active-account page"
-                    )
-
                     val accounts =
-                        AccountRepository
-                            .getActivePage(
-                                page =
-                                    safePage,
+                        AccountRepository.getAllPage(
+                            page = safePage,
+                            pageSize = pageSize,
+                            search = search
+                        )
 
-                                pageSize =
-                                    pageSize
+                    val encodedSearch =
+                        search?.let { searchValue ->
+                            java.net.URLEncoder.encode(
+                                searchValue,
+                                Charsets.UTF_8.name()
                             )
+                        }
 
-                    println(
-                        "Active-account page retrieval completed"
-                    )
-
-                    println(
-                        "Retrieved account count: ${accounts.size}"
-                    )
-
-                    println(
-                        "Page query duration: ${
-                            System.currentTimeMillis() -
-                                    pageQueryStartedAt
-                        } ms"
-                    )
+                    val searchQueryParameter =
+                        encodedSearch
+                            ?.let { encodedValue ->
+                                "&search=$encodedValue"
+                            }
+                            .orEmpty()
 
                     val nextPage =
-                        if (
-                            safePage <
-                            totalPages
-                        ) {
-                            "/api/accounts?page=${safePage + 1}&page_size=$pageSize"
+                        if (safePage < totalPages) {
+                            "/api/accounts" +
+                                    "?page=${safePage + 1}" +
+                                    "&page_size=$pageSize" +
+                                    searchQueryParameter
                         } else {
                             null
                         }
 
                     val previousPage =
-                        if (
-                            safePage >
-                            1
-                        ) {
-                            "/api/accounts?page=${safePage - 1}&page_size=$pageSize"
+                        if (safePage > 1) {
+                            "/api/accounts" +
+                                    "?page=${safePage - 1}" +
+                                    "&page_size=$pageSize" +
+                                    searchQueryParameter
                         } else {
                             null
                         }
 
-                    println(
-                        "Building paginated response"
-                    )
-
                     PaginatedAccountListItemResponse(
-                        count =
-                            totalCount,
-
-                        next =
-                            nextPage,
-
-                        previous =
-                            previousPage,
-
-                        results =
-                            accounts
+                        count = totalCount,
+                        next = nextPage,
+                        previous = previousPage,
+                        results = accounts
                     )
                 }
             } catch (
                 exception: Exception
             ) {
-                println(
-                    "Unable to retrieve active accounts"
-                )
-
-                println(
-                    "Error type: ${exception::class.simpleName}"
-                )
-
-                println(
-                    "Error message: ${exception.message}"
-                )
-
-                exception.cause?.let { cause ->
-                    println(
-                        "Cause type: ${cause::class.simpleName}"
-                    )
-
-                    println(
-                        "Cause message: ${cause.message}"
-                    )
-                }
-
-                exception.printStackTrace()
-
-                println(
-                    "GET /api/accounts completed with HTTP 500"
-                )
-
-                println(
-                    "Total failed duration: ${
-                        System.currentTimeMillis() -
-                                requestStartedAt
-                    } ms"
-                )
-
-                println(
-                    "=================================================="
-                )
-
                 return@get call.respond(
                     HttpStatusCode.InternalServerError,
                     mapOf(
-                        "detail" to
-                                "The active accounts could not be retrieved."
+                        "detail" to (
+                                exception.message
+                                    ?: "The accounts could not be retrieved."
+                                )
                     )
                 )
             }
 
-        val queryDuration =
-            System.currentTimeMillis() -
-                    requestStartedAt
-
-        println(
-            "Active accounts retrieved successfully"
-        )
-
-        println(
-            "Total active accounts: ${result.count}"
-        )
-
-        println(
-            "Accounts returned: ${result.results.size}"
-        )
-
-        println(
-            "Total operation duration: $queryDuration ms"
-        )
-
-        println(
-            "Next page: ${result.next ?: "None"}"
-        )
-
-        println(
-            "Previous page: ${result.previous ?: "None"}"
-        )
-
-        println(
-            "Sending active-account response"
-        )
-
         call.respond(
             HttpStatusCode.OK,
             result
-        )
-
-        println(
-            "GET /api/accounts completed with HTTP 200"
-        )
-
-        println(
-            "=================================================="
         )
     }
 
 
 
 
-
-
-
-    /*
-     * Get one account
-     */
+                            /*
+                             * Get one account
+                             */
 
     get("/{id}") {
 
