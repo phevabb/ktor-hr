@@ -16,7 +16,13 @@ import org.jetbrains.exposed.v1.r2dbc.selectAll
 object AdminUsersByFilterRepository {
 
     private suspend fun rowToFilterableAccount(
-        row: ResultRow
+        row: ResultRow,
+        directorateNames: MutableMap<Int, String?>,
+        categoryNames: MutableMap<Int, String?>,
+        districtNames: MutableMap<Int, String?>,
+        regionNames: MutableMap<Int, String?>,
+        managementUnitNames: MutableMap<Int, String?>,
+        leaveTypeNames: MutableMap<Int, String?>
     ): FilterableAccount {
         val firstName =
             row[Accounts.firstName]
@@ -75,12 +81,95 @@ object AdminUsersByFilterRepository {
         val managementUnitId =
             row[
                 Accounts.managementUnitCostCentreId
-            ]
-                ?.value
+            ]?.value
 
         val onLeaveTypeId =
             row[Accounts.onLeaveTypeId]
                 ?.value
+
+        val directorateName =
+            if (directorateId == null) {
+                null
+            } else {
+                directorateNames.getOrPut(
+                    directorateId
+                ) {
+                    AccountRepository
+                        .findDirectorateName(
+                            directorateId
+                        )
+                }
+            }
+
+        val categoryName =
+            if (categoryId == null) {
+                null
+            } else {
+                categoryNames.getOrPut(
+                    categoryId
+                ) {
+                    AccountRepository
+                        .findCategoryName(
+                            categoryId
+                        )
+                }
+            }
+
+        val districtName =
+            if (districtId == null) {
+                null
+            } else {
+                districtNames.getOrPut(
+                    districtId
+                ) {
+                    AccountRepository
+                        .findDistrictName(
+                            districtId
+                        )
+                }
+            }
+
+        val regionName =
+            if (regionId == null) {
+                null
+            } else {
+                regionNames.getOrPut(
+                    regionId
+                ) {
+                    AccountRepository
+                        .findRegionName(
+                            regionId
+                        )
+                }
+            }
+
+        val managementUnitName =
+            if (managementUnitId == null) {
+                null
+            } else {
+                managementUnitNames.getOrPut(
+                    managementUnitId
+                ) {
+                    AccountRepository
+                        .findManagementUnitName(
+                            managementUnitId
+                        )
+                }
+            }
+
+        val onLeaveTypeName =
+            if (onLeaveTypeId == null) {
+                null
+            } else {
+                leaveTypeNames.getOrPut(
+                    onLeaveTypeId
+                ) {
+                    AccountRepository
+                        .findOnLeaveTypeName(
+                            onLeaveTypeId
+                        )
+                }
+            }
 
         return FilterableAccount(
             id =
@@ -108,55 +197,37 @@ object AdminUsersByFilterRepository {
                 directorateId,
 
             directorateName =
-                AccountRepository
-                    .findDirectorateName(
-                        directorateId
-                    ),
+                directorateName,
 
             categoryId =
                 categoryId,
 
             categoryName =
-                AccountRepository
-                    .findCategoryName(
-                        categoryId
-                    ),
+                categoryName,
 
             districtId =
                 districtId,
 
             districtName =
-                AccountRepository
-                    .findDistrictName(
-                        districtId
-                    ),
+                districtName,
 
             regionId =
                 regionId,
 
             regionName =
-                AccountRepository
-                    .findRegionName(
-                        regionId
-                    ),
+                regionName,
 
             managementUnitId =
                 managementUnitId,
 
             managementUnitCostCentreName =
-                AccountRepository
-                    .findManagementUnitName(
-                        managementUnitId
-                    ),
+                managementUnitName,
 
             onLeaveTypeId =
                 onLeaveTypeId,
 
             onLeaveTypeName =
-                AccountRepository
-                    .findOnLeaveTypeName(
-                        onLeaveTypeId
-                    ),
+                onLeaveTypeName,
 
             staffCategory =
                 row[Accounts.staffCategory]
@@ -169,8 +240,7 @@ object AdminUsersByFilterRepository {
             fulltimeContractStaff =
                 row[
                     Accounts.fulltimeContractStaff
-                ]
-                    ?.name,
+                ]?.name,
 
             professional =
                 row[Accounts.professional]
@@ -179,8 +249,7 @@ object AdminUsersByFilterRepository {
             currentSalaryLevel =
                 row[
                     Accounts.currentSalaryLevel
-                ]
-                    ?.name,
+                ]?.name,
 
             age =
                 AccountComputedValues.age(
@@ -256,11 +325,6 @@ object AdminUsersByFilterRepository {
         val isActive: Boolean
     )
 
-    data class FilterResult(
-        val filterType: String?,
-        val users: List<AdminFilteredUserResponse>
-    )
-
     private val ageRanges =
         linkedMapOf(
             "20 - 30" to
@@ -277,19 +341,31 @@ object AdminUsersByFilterRepository {
         )
 
     suspend fun getUsersByFilter(
-        requestedFilter: String
-    ): FilterResult {
+        requestedFilter: String,
+        page: Int,
+        pageSize: Int
+    ): AdminUsersByFilterRepositoryResult {
         val normalizedFilter =
             normalizeValue(
                 requestedFilter
             )
 
         if (normalizedFilter.isBlank()) {
-            return FilterResult(
+            return AdminUsersByFilterRepositoryResult(
                 filterType = null,
+                totalCount = 0L,
                 users = emptyList()
             )
         }
+
+        val safePage =
+            page.coerceAtLeast(1)
+
+        val safePageSize =
+            pageSize.coerceIn(
+                minimumValue = 1,
+                maximumValue = 100
+            )
 
         val rows =
             Accounts
@@ -297,133 +373,159 @@ object AdminUsersByFilterRepository {
                 .where {
                     Accounts.isActive eq true
                 }
-                .toList()
-                .sortedWith(
-                    compareBy<ResultRow>(
-                        { row ->
-                            row[
-                                Accounts.firstName
-                            ]
-                                ?.lowercase()
-                                ?: ""
-                        },
-                        { row ->
-                            row[
-                                Accounts.lastName
-                            ]
-                                ?.lowercase()
-                                ?: ""
-                        },
-                        { row ->
-                            row[
-                                Accounts.id
-                            ].value
-                        }
-                    )
+                .orderBy(
+                    Accounts.firstName,
+                    SortOrder.ASC
                 )
+                .orderBy(
+                    Accounts.lastName,
+                    SortOrder.ASC
+                )
+                .orderBy(
+                    Accounts.id,
+                    SortOrder.ASC
+                )
+                .toList()
+
+        val directorateNames =
+            mutableMapOf<Int, String?>()
+
+        val categoryNames =
+            mutableMapOf<Int, String?>()
+
+        val districtNames =
+            mutableMapOf<Int, String?>()
+
+        val regionNames =
+            mutableMapOf<Int, String?>()
+
+        val managementUnitNames =
+            mutableMapOf<Int, String?>()
+
+        val leaveTypeNames =
+            mutableMapOf<Int, String?>()
 
         val allAccounts =
-            mutableListOf<FilterableAccount>()
+            ArrayList<FilterableAccount>(
+                rows.size
+            )
 
         for (row in rows) {
             allAccounts.add(
                 rowToFilterableAccount(
-                    row
+                    row = row,
+                    directorateNames =
+                        directorateNames,
+                    categoryNames =
+                        categoryNames,
+                    districtNames =
+                        districtNames,
+                    regionNames =
+                        regionNames,
+                    managementUnitNames =
+                        managementUnitNames,
+                    leaveTypeNames =
+                        leaveTypeNames
                 )
             )
         }
 
-
         val filterType =
             determineFilterType(
-                accounts = allAccounts,
+                accounts =
+                    allAccounts,
+
                 requestedFilter =
                     normalizedFilter
             )
 
         if (filterType == null) {
-            return FilterResult(
+            return AdminUsersByFilterRepositoryResult(
                 filterType = null,
+                totalCount = 0L,
                 users = emptyList()
             )
         }
 
-        val filteredUsers =
-            allAccounts
-                .asSequence()
-                .filter { account ->
-                    accountMatchesFilter(
-                        account = account,
-                        requestedFilter =
-                            normalizedFilter,
-                        filterType =
-                            filterType
-                    )
-                }
-                .map { account ->
-                    toFilteredUserResponse(
-                        account
-                    )
-                }
-                .toList()
-
-        return FilterResult(
-            filterType = filterType,
-            users = filteredUsers
-        )
-    }
-
-
-
-    private fun toFilteredUserResponse(
-        account: AccountResponse
-    ): AdminFilteredUserResponse {
-        val firstName =
-            account.firstName
-                ?.trim()
-                ?.takeIf { value ->
-                    value.isNotBlank()
-                }
-
-        val lastName =
-            account.lastName
-                ?.trim()
-                ?.takeIf { value ->
-                    value.isNotBlank()
-                }
-
-        val generatedFullName =
-            listOfNotNull(
-                firstName,
-                lastName
-            )
-                .joinToString(
-                    separator = " "
+        val matchingAccounts =
+            allAccounts.filter { account ->
+                accountMatchesFilter(
+                    account = account,
+                    requestedFilter =
+                        normalizedFilter,
+                    filterType =
+                        filterType
                 )
-                .trim()
-                .takeIf { value ->
-                    value.isNotBlank()
-                }
+            }
 
-        val fullName =
-            account.fullName
-                ?.trim()
-                ?.takeIf { value ->
-                    value.isNotBlank()
-                }
-                ?: generatedFullName
+        val totalCount =
+            matchingAccounts.size.toLong()
 
-        return AdminFilteredUserResponse(
-            id = account.id,
-            userId = account.userId,
-            firstName = firstName,
-            lastName = lastName,
-            fullName = fullName,
-            phoneNumber = account.phoneNumber,
-            profilePictureUrl =
-                account.profilePictureUrl
+        val totalPages =
+            if (totalCount == 0L) {
+                1
+            } else {
+                (
+                        (
+                                totalCount +
+                                        safePageSize.toLong() -
+                                        1L
+                                ) /
+                                safePageSize.toLong()
+                        ).toInt()
+            }
+
+        val effectivePage =
+            safePage.coerceIn(
+                minimumValue = 1,
+                maximumValue = totalPages
+            )
+
+        val startIndex =
+            (
+                    effectivePage - 1
+                    ) * safePageSize
+
+        val endIndex =
+            (
+                    startIndex +
+                            safePageSize
+                    ).coerceAtMost(
+                    matchingAccounts.size
+                )
+
+        val pageAccounts =
+            if (startIndex < endIndex) {
+                matchingAccounts.subList(
+                    fromIndex = startIndex,
+                    toIndex = endIndex
+                )
+            } else {
+                emptyList()
+            }
+
+        val pageUsers =
+            pageAccounts.map { account ->
+                toFilteredUserResponse(
+                    account
+                )
+            }
+
+        return AdminUsersByFilterRepositoryResult(
+            filterType = filterType,
+            totalCount = totalCount,
+            users = pageUsers
         )
     }
+
+
+
+
+
+
+
+
+
     private fun determineFilterType(
         accounts: List<FilterableAccount>,
         requestedFilter: String

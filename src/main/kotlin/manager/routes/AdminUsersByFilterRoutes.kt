@@ -11,7 +11,6 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 
 fun Route.adminUsersByFilterRoutes() {
-
     get("/users-per-department/admin") {
         val principal =
             call.principal<AuthPrincipal>()
@@ -27,30 +26,35 @@ fun Route.adminUsersByFilterRoutes() {
             call.request
                 .queryParameters["dept"]
                 ?.trim()
-                ?: ""
+                .orEmpty()
 
-        val requestedPage =
+        if (requestedFilter.isBlank()) {
+            return@get call.respond(
+                HttpStatusCode.BadRequest,
+                mapOf(
+                    "dept" to listOf(
+                        "A filter value is required."
+                    )
+                )
+            )
+        }
+
+        val page =
             call.request
                 .queryParameters["page"]
                 ?.toIntOrNull()
+                ?.coerceAtLeast(1)
                 ?: 1
 
-        val requestedPageSize =
+        val pageSize =
             call.request
                 .queryParameters["page_size"]
                 ?.toIntOrNull()
+                ?.coerceIn(
+                    minimumValue = 1,
+                    maximumValue = 100
+                )
                 ?: 10
-
-        val page =
-            requestedPage.coerceAtLeast(
-                minimumValue = 1
-            )
-
-        val pageSize =
-            requestedPageSize.coerceIn(
-                minimumValue = 1,
-                maximumValue = 100
-            )
 
         val result =
             try {
@@ -76,14 +80,13 @@ fun Route.adminUsersByFilterRoutes() {
             } catch (
                 exception: Exception
             ) {
+                exception.printStackTrace()
+
                 return@get call.respond(
                     HttpStatusCode.InternalServerError,
                     mapOf(
                         "detail" to
-                                (
-                                        exception.message
-                                            ?: "Filtered users could not be retrieved."
-                                        )
+                                "Filtered users could not be retrieved."
                     )
                 )
             }
@@ -130,10 +133,9 @@ fun Route.adminUsersByFilterRoutes() {
                 call.respond(
                     HttpStatusCode.BadRequest,
                     mapOf(
-                        "dept" to
-                                listOf(
-                                    "A filter value is required."
-                                )
+                        "dept" to listOf(
+                            "A filter value is required."
+                        )
                     )
                 )
             }

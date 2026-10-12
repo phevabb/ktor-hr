@@ -32,9 +32,7 @@ object AdminUsersByFilterService {
             } catch (
                 exception: Exception
             ) {
-                printExceptionDetails(
-                    exception
-                )
+                exception.printStackTrace()
 
                 return AdminUsersByFilterResult
                     .Failed
@@ -72,19 +70,25 @@ object AdminUsersByFilterService {
                 AdminUsersByFilterRepository
                     .getUsersByFilter(
                         requestedFilter =
-                            cleanFilter
+                            cleanFilter,
+
+                        page =
+                            requestedPage,
+
+                        pageSize =
+                            safePageSize
                     )
 
-            val allUsers =
-                repositoryResult.users
-
             val totalCount =
-                allUsers.size.toLong()
+                repositoryResult.totalCount
 
             val totalPages =
                 calculateTotalPages(
-                    totalCount = totalCount,
-                    pageSize = safePageSize
+                    totalCount =
+                        totalCount,
+
+                    pageSize =
+                        safePageSize
                 )
 
             val safePage =
@@ -92,40 +96,6 @@ object AdminUsersByFilterService {
                     minimumValue = 1,
                     maximumValue = totalPages
                 )
-
-            val startIndex =
-                (
-                        safePage - 1
-                        ) * safePageSize
-
-            val safeStartIndex =
-                startIndex.coerceAtMost(
-                    allUsers.size
-                )
-
-            val endIndex =
-                (
-                        safeStartIndex +
-                                safePageSize
-                        ).coerceAtMost(
-                        allUsers.size
-                    )
-
-            val pageUsers =
-                if (
-                    safeStartIndex <
-                    endIndex
-                ) {
-                    allUsers.subList(
-                        fromIndex =
-                            safeStartIndex,
-
-                        toIndex =
-                            endIndex
-                    )
-                } else {
-                    emptyList()
-                }
 
             val nextPageUrl =
                 if (safePage < totalPages) {
@@ -188,7 +158,7 @@ object AdminUsersByFilterService {
                                 totalCount,
 
                             users =
-                                pageUsers
+                                repositoryResult.users
                         )
                 )
 
@@ -199,15 +169,12 @@ object AdminUsersByFilterService {
         } catch (
             exception: Exception
         ) {
-            printExceptionDetails(
-                exception
-            )
+            exception.printStackTrace()
 
             AdminUsersByFilterResult
                 .Failed
         }
     }
-
     private fun calculateTotalPages(
         totalCount: Long,
         pageSize: Int
@@ -245,39 +212,4 @@ object AdminUsersByFilterService {
                 "&page_size=$pageSize"
     }
 
-    private fun printExceptionDetails(
-        exception: Exception
-    ) {
-        println(
-            "Error type: ${exception::class.simpleName}"
-        )
-
-        println(
-            "Error message: ${exception.message}"
-        )
-
-        var currentCause =
-            exception.cause
-
-        var causeLevel =
-            1
-
-        while (currentCause != null) {
-            println(
-                "Cause $causeLevel type: " +
-                        "${currentCause::class.simpleName}"
-            )
-
-            println(
-                "Cause $causeLevel message: " +
-                        "${currentCause.message}"
-            )
-
-            currentCause =
-                currentCause.cause
-
-            causeLevel +=
-                1
-        }
-    }
 }
