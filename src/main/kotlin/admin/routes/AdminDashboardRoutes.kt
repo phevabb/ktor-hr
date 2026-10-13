@@ -15,58 +15,196 @@ import io.ktor.server.routing.get
 fun Route.adminDashboardRoutes() {
     authenticate("auth-jwt") {
         get("/dashboard-summary") {
-            val principal =
-                call.principal<AuthPrincipal>()
-                    ?: return@get call.respond(
-                        HttpStatusCode.Unauthorized,
-                        AuthMessageResponse(
-                            detail =
-                                "Authentication is required."
-                        )
-                    )
+            val requestStartedAt =
+                System.currentTimeMillis()
 
             println(
-                "Admin dashboard summary requested: " +
-                        "accountId=${principal.accountId}, " +
-                        "userId=${principal.userId}, " +
-                        "role=${principal.role}"
+                "=================================================="
             )
+
+            println(
+                "Admin dashboard summary request started"
+            )
+
+            val authenticationStartedAt =
+                System.currentTimeMillis()
+
+            val principal =
+                call.principal<AuthPrincipal>()
+
+            println(
+                "Dashboard principal lookup duration: ${
+                    System.currentTimeMillis() -
+                            authenticationStartedAt
+                } ms"
+            )
+
+            if (principal == null) {
+                val responseStartedAt =
+                    System.currentTimeMillis()
+
+                call.respond(
+                    HttpStatusCode.Unauthorized,
+                    AuthMessageResponse(
+                        detail =
+                            "Authentication is required."
+                    )
+                )
+
+                println(
+                    "Unauthorized response duration: ${
+                        System.currentTimeMillis() -
+                                responseStartedAt
+                    } ms"
+                )
+
+                println(
+                    "Dashboard total request duration: ${
+                        System.currentTimeMillis() -
+                                requestStartedAt
+                    } ms"
+                )
+
+                println(
+                    "=================================================="
+                )
+
+                return@get
+            }
+
+            println(
+                "Dashboard account ID: ${principal.accountId}"
+            )
+
+            println(
+                "Dashboard user ID: ${principal.userId}"
+            )
+
+            println(
+                "Dashboard JWT role: ${principal.role}"
+            )
+
+            val transactionStartedAt =
+                System.currentTimeMillis()
 
             val result =
                 try {
                     dbQuery {
-                        AdminDashboardService
-                            .getDashboardSummary(
-                                accountId =
-                                    principal.accountId
-                            )
+                        val serviceStartedAt =
+                            System.currentTimeMillis()
+
+                        println(
+                            "Admin dashboard service started"
+                        )
+
+                        val serviceResult =
+                            AdminDashboardService
+                                .getDashboardSummary(
+                                    accountId =
+                                        principal.accountId
+                                )
+
+                        println(
+                            "Admin dashboard service duration: ${
+                                System.currentTimeMillis() -
+                                        serviceStartedAt
+                            } ms"
+                        )
+
+                        serviceResult
                     }
-                } catch (exception: Exception) {
+                } catch (
+                    exception: Exception
+                ) {
                     println(
-                        "Unable to retrieve admin dashboard summary: " +
-                                "${exception::class.simpleName}: " +
+                        "Admin dashboard transaction failed"
+                    )
+
+                    println(
+                        "Dashboard error type: " +
+                                "${exception::class.simpleName}"
+                    )
+
+                    println(
+                        "Dashboard error message: " +
                                 "${exception.message}"
                     )
 
-                    return@get call.respond(
+                    exception.printStackTrace()
+
+                    println(
+                        "Failed dashboard transaction duration: ${
+                            System.currentTimeMillis() -
+                                    transactionStartedAt
+                        } ms"
+                    )
+
+                    val responseStartedAt =
+                        System.currentTimeMillis()
+
+                    call.respond(
                         HttpStatusCode.InternalServerError,
                         AuthMessageResponse(
                             detail =
                                 "The admin dashboard summary could not be retrieved."
                         )
                     )
+
+                    println(
+                        "Failed dashboard response duration: ${
+                            System.currentTimeMillis() -
+                                    responseStartedAt
+                        } ms"
+                    )
+
+                    println(
+                        "Dashboard total failed request duration: ${
+                            System.currentTimeMillis() -
+                                    requestStartedAt
+                        } ms"
+                    )
+
+                    println(
+                        "=================================================="
+                    )
+
+                    return@get
                 }
+
+            println(
+                "Admin dashboard transaction duration: ${
+                    System.currentTimeMillis() -
+                            transactionStartedAt
+                } ms"
+            )
+
+            val responseStartedAt =
+                System.currentTimeMillis()
 
             when (result) {
                 is AdminDashboardResult.Success -> {
                     println(
-                        "Admin dashboard summary returned: " +
-                                "users=${result.summary.numOfUsers}, " +
-                                "females=${result.summary.numOfFemales}, " +
-                                "males=${result.summary.numOfMales}, " +
-                                "staff=${result.summary.numOfStaffs}, " +
-                                "admins=${result.summary.numOfAdmins}, " +
-                                "managers=${result.summary.numOfManagers}"
+                        "Dashboard users: ${result.summary.numOfUsers}"
+                    )
+
+                    println(
+                        "Dashboard females: ${result.summary.numOfFemales}"
+                    )
+
+                    println(
+                        "Dashboard males: ${result.summary.numOfMales}"
+                    )
+
+                    println(
+                        "Dashboard staff: ${result.summary.numOfStaffs}"
+                    )
+
+                    println(
+                        "Dashboard admins: ${result.summary.numOfAdmins}"
+                    )
+
+                    println(
+                        "Dashboard managers: ${result.summary.numOfManagers}"
                     )
 
                     call.respond(
@@ -115,6 +253,24 @@ fun Route.adminDashboardRoutes() {
                     )
                 }
             }
+
+            println(
+                "Dashboard response serialization duration: ${
+                    System.currentTimeMillis() -
+                            responseStartedAt
+                } ms"
+            )
+
+            println(
+                "Dashboard total request duration: ${
+                    System.currentTimeMillis() -
+                            requestStartedAt
+                } ms"
+            )
+
+            println(
+                "=================================================="
+            )
         }
     }
 }

@@ -11,33 +11,65 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 
 fun Route.adminUsersByFilterRoutes() {
+
     get("/users-per-department/admin") {
+        val requestStartedAt =
+            System.currentTimeMillis()
+
+        println(
+            "=================================================="
+        )
+
+        println(
+            "Admin filtered-users request started"
+        )
+
+        val authenticationStartedAt =
+            System.currentTimeMillis()
+
         val principal =
             call.principal<AuthPrincipal>()
-                ?: return@get call.respond(
-                    HttpStatusCode.Unauthorized,
-                    mapOf(
-                        "detail" to
-                                "Authentication is required."
-                    )
+
+        println(
+            "Authentication lookup duration: ${
+                System.currentTimeMillis() -
+                        authenticationStartedAt
+            } ms"
+        )
+
+        if (principal == null) {
+            println(
+                "Request rejected: Authentication is required"
+            )
+
+            println(
+                "Total request duration: ${
+                    System.currentTimeMillis() -
+                            requestStartedAt
+                } ms"
+            )
+
+            println(
+                "=================================================="
+            )
+
+            return@get call.respond(
+                HttpStatusCode.Unauthorized,
+                mapOf(
+                    "detail" to
+                            "Authentication is required."
                 )
+            )
+        }
+
+        val parameterStartedAt =
+            System.currentTimeMillis()
 
         val requestedFilter =
             call.request
                 .queryParameters["dept"]
                 ?.trim()
                 .orEmpty()
-
-        if (requestedFilter.isBlank()) {
-            return@get call.respond(
-                HttpStatusCode.BadRequest,
-                mapOf(
-                    "dept" to listOf(
-                        "A filter value is required."
-                    )
-                )
-            )
-        }
 
         val page =
             call.request
@@ -56,31 +88,123 @@ fun Route.adminUsersByFilterRoutes() {
                 )
                 ?: 10
 
+        println(
+            "Parameter parsing duration: ${
+                System.currentTimeMillis() -
+                        parameterStartedAt
+            } ms"
+        )
+
+        println(
+            "Filter: $requestedFilter"
+        )
+
+        println(
+            "Page: $page"
+        )
+
+        println(
+            "Page size: $pageSize"
+        )
+
+        if (requestedFilter.isBlank()) {
+            println(
+                "Request rejected: Filter is required"
+            )
+
+            println(
+                "Total request duration: ${
+                    System.currentTimeMillis() -
+                            requestStartedAt
+                } ms"
+            )
+
+            println(
+                "=================================================="
+            )
+
+            return@get call.respond(
+                HttpStatusCode.BadRequest,
+                mapOf(
+                    "dept" to
+                            listOf(
+                                "A filter value is required."
+                            )
+                )
+            )
+        }
+
+        val transactionStartedAt =
+            System.currentTimeMillis()
+
         val result =
             try {
                 dbQuery {
-                    AdminUsersByFilterService
-                        .getUsersByFilter(
-                            adminAccountId =
-                                principal.accountId,
+                    val serviceStartedAt =
+                        System.currentTimeMillis()
 
-                            requestedFilter =
-                                requestedFilter,
+                    val serviceResult =
+                        AdminUsersByFilterService
+                            .getUsersByFilter(
+                                adminAccountId =
+                                    principal.accountId,
 
-                            page =
-                                page,
+                                requestedFilter =
+                                    requestedFilter,
 
-                            pageSize =
-                                pageSize,
+                                page =
+                                    page,
 
-                            requestPath =
-                                "/api/superadmin/users-per-department/admin"
-                        )
+                                pageSize =
+                                    pageSize,
+
+                                requestPath =
+                                    "/api/superadmin/users-per-department/admin"
+                            )
+
+                    println(
+                        "Service duration inside transaction: ${
+                            System.currentTimeMillis() -
+                                    serviceStartedAt
+                        } ms"
+                    )
+
+                    serviceResult
                 }
             } catch (
                 exception: Exception
             ) {
+                println(
+                    "Filtered-users transaction failed"
+                )
+
+                println(
+                    "Error type: ${exception::class.simpleName}"
+                )
+
+                println(
+                    "Error message: ${exception.message}"
+                )
+
                 exception.printStackTrace()
+
+                println(
+                    "Failed transaction duration: ${
+                        System.currentTimeMillis() -
+                                transactionStartedAt
+                    } ms"
+                )
+
+                println(
+                    "Total failed request duration: ${
+                        System.currentTimeMillis() -
+                                requestStartedAt
+                    } ms"
+                )
+
+                println(
+                    "=================================================="
+                )
 
                 return@get call.respond(
                     HttpStatusCode.InternalServerError,
@@ -91,8 +215,28 @@ fun Route.adminUsersByFilterRoutes() {
                 )
             }
 
+        println(
+            "Database transaction duration: ${
+                System.currentTimeMillis() -
+                        transactionStartedAt
+            } ms"
+        )
+
+        val responseStartedAt =
+            System.currentTimeMillis()
+
         when (result) {
             is AdminUsersByFilterResult.Success -> {
+                println(
+                    "Matching users: ${result.response.count}"
+                )
+
+                println(
+                    "Users returned on page: ${
+                        result.response.results.users.size
+                    }"
+                )
+
                 call.respond(
                     HttpStatusCode.OK,
                     result.response
@@ -133,9 +277,10 @@ fun Route.adminUsersByFilterRoutes() {
                 call.respond(
                     HttpStatusCode.BadRequest,
                     mapOf(
-                        "dept" to listOf(
-                            "A filter value is required."
-                        )
+                        "dept" to
+                                listOf(
+                                    "A filter value is required."
+                                )
                     )
                 )
             }
@@ -150,5 +295,23 @@ fun Route.adminUsersByFilterRoutes() {
                 )
             }
         }
+
+        println(
+            "Response building and serialization duration: ${
+                System.currentTimeMillis() -
+                        responseStartedAt
+            } ms"
+        )
+
+        println(
+            "Total request duration: ${
+                System.currentTimeMillis() -
+                        requestStartedAt
+            } ms"
+        )
+
+        println(
+            "=================================================="
+        )
     }
 }

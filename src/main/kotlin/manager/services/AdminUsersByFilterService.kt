@@ -16,13 +16,61 @@ object AdminUsersByFilterService {
         pageSize: Int,
         requestPath: String
     ): AdminUsersByFilterResult {
+        val serviceStartedAt =
+            System.currentTimeMillis()
+
+        println(
+            "--------------------------------------------------"
+        )
+
+        println(
+            "AdminUsersByFilterService started"
+        )
+
+        val filterPreparationStartedAt =
+            System.currentTimeMillis()
+
         val cleanFilter =
             requestedFilter.trim()
 
+        val safePageSize =
+            pageSize.coerceIn(
+                minimumValue = 1,
+                maximumValue = 100
+            )
+
+        val requestedPage =
+            page.coerceAtLeast(1)
+
+        println(
+            "Service parameter preparation duration: ${
+                System.currentTimeMillis() -
+                        filterPreparationStartedAt
+            } ms"
+        )
+
         if (cleanFilter.isBlank()) {
+            println(
+                "Service rejected request because filter is blank"
+            )
+
+            println(
+                "Service total duration: ${
+                    System.currentTimeMillis() -
+                            serviceStartedAt
+                } ms"
+            )
+
+            println(
+                "--------------------------------------------------"
+            )
+
             return AdminUsersByFilterResult
                 .FilterRequired
         }
+
+        val accountLookupStartedAt =
+            System.currentTimeMillis()
 
         val account =
             try {
@@ -32,15 +80,87 @@ object AdminUsersByFilterService {
             } catch (
                 exception: Exception
             ) {
+                println(
+                    "Admin account lookup failed"
+                )
+
+                println(
+                    "Admin account lookup duration: ${
+                        System.currentTimeMillis() -
+                                accountLookupStartedAt
+                    } ms"
+                )
+
                 exception.printStackTrace()
+
+                println(
+                    "Service total failed duration: ${
+                        System.currentTimeMillis() -
+                                serviceStartedAt
+                    } ms"
+                )
+
+                println(
+                    "--------------------------------------------------"
+                )
 
                 return AdminUsersByFilterResult
                     .Failed
             }
-                ?: return AdminUsersByFilterResult
-                    .AccountNotFound
+
+        println(
+            "Admin account lookup duration: ${
+                System.currentTimeMillis() -
+                        accountLookupStartedAt
+            } ms"
+        )
+
+        if (account == null) {
+            println(
+                "Authenticated Admin account was not found"
+            )
+
+            println(
+                "Service total duration: ${
+                    System.currentTimeMillis() -
+                            serviceStartedAt
+                } ms"
+            )
+
+            println(
+                "--------------------------------------------------"
+            )
+
+            return AdminUsersByFilterResult
+                .AccountNotFound
+        }
+
+        val authorizationStartedAt =
+            System.currentTimeMillis()
 
         if (!account.isActive) {
+            println(
+                "Authorization check duration: ${
+                    System.currentTimeMillis() -
+                            authorizationStartedAt
+                } ms"
+            )
+
+            println(
+                "Service rejected inactive account"
+            )
+
+            println(
+                "Service total duration: ${
+                    System.currentTimeMillis() -
+                            serviceStartedAt
+                } ms"
+            )
+
+            println(
+                "--------------------------------------------------"
+            )
+
             return AdminUsersByFilterResult
                 .AccountInactive
         }
@@ -52,20 +172,47 @@ object AdminUsersByFilterService {
             )
 
         if (!accountIsAdmin) {
+            println(
+                "Authorization check duration: ${
+                    System.currentTimeMillis() -
+                            authorizationStartedAt
+                } ms"
+            )
+
+            println(
+                "Service rejected non-Admin account"
+            )
+
+            println(
+                "Service total duration: ${
+                    System.currentTimeMillis() -
+                            serviceStartedAt
+                } ms"
+            )
+
+            println(
+                "--------------------------------------------------"
+            )
+
             return AdminUsersByFilterResult
                 .AccessDenied
         }
 
-        val safePageSize =
-            pageSize.coerceIn(
-                minimumValue = 1,
-                maximumValue = 100
-            )
-
-        val requestedPage =
-            page.coerceAtLeast(1)
+        println(
+            "Authorization check duration: ${
+                System.currentTimeMillis() -
+                        authorizationStartedAt
+            } ms"
+        )
 
         return try {
+            val repositoryStartedAt =
+                System.currentTimeMillis()
+
+            println(
+                "Repository execution started"
+            )
+
             val repositoryResult =
                 AdminUsersByFilterRepository
                     .getUsersByFilter(
@@ -78,6 +225,36 @@ object AdminUsersByFilterService {
                         pageSize =
                             safePageSize
                     )
+
+            val repositoryDuration =
+                System.currentTimeMillis() -
+                        repositoryStartedAt
+
+            println(
+                "Repository execution duration: $repositoryDuration ms"
+            )
+
+            println(
+                "Repository total matching users: ${
+                    repositoryResult.totalCount
+                }"
+            )
+
+            println(
+                "Repository users returned: ${
+                    repositoryResult.users.size
+                }"
+            )
+
+            println(
+                "Repository filter type: ${
+                    repositoryResult.filterType
+                        ?: "None"
+                }"
+            )
+
+            val paginationStartedAt =
+                System.currentTimeMillis()
 
             val totalCount =
                 repositoryResult.totalCount
@@ -135,6 +312,16 @@ object AdminUsersByFilterService {
                     null
                 }
 
+            println(
+                "Pagination calculation duration: ${
+                    System.currentTimeMillis() -
+                            paginationStartedAt
+                } ms"
+            )
+
+            val responseStartedAt =
+                System.currentTimeMillis()
+
             val response =
                 AdminUsersByFilterResponse(
                     count =
@@ -162,6 +349,24 @@ object AdminUsersByFilterService {
                         )
                 )
 
+            println(
+                "Service response construction duration: ${
+                    System.currentTimeMillis() -
+                            responseStartedAt
+                } ms"
+            )
+
+            println(
+                "Service total duration: ${
+                    System.currentTimeMillis() -
+                            serviceStartedAt
+                } ms"
+            )
+
+            println(
+                "--------------------------------------------------"
+            )
+
             AdminUsersByFilterResult.Success(
                 response =
                     response
@@ -169,12 +374,36 @@ object AdminUsersByFilterService {
         } catch (
             exception: Exception
         ) {
+            println(
+                "AdminUsersByFilterService failed"
+            )
+
+            println(
+                "Error type: ${exception::class.simpleName}"
+            )
+
+            println(
+                "Error message: ${exception.message}"
+            )
+
             exception.printStackTrace()
+
+            println(
+                "Service total failed duration: ${
+                    System.currentTimeMillis() -
+                            serviceStartedAt
+                } ms"
+            )
+
+            println(
+                "--------------------------------------------------"
+            )
 
             AdminUsersByFilterResult
                 .Failed
         }
     }
+
     private fun calculateTotalPages(
         totalCount: Long,
         pageSize: Int
@@ -211,5 +440,4 @@ object AdminUsersByFilterService {
                 "&page=$page" +
                 "&page_size=$pageSize"
     }
-
 }
