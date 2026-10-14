@@ -324,8 +324,8 @@ object ManagerUsersByFilterNoPagesService {
                     "Matched user ${index + 1}: " +
                             "accountId=${account.id}, " +
                             "userId=${account.userId}, " +
-                            "fullName=${account.fullName}, " +
-                            "region=${account.regionName}"
+                            "fullName=${account.fullName}, "
+
                 )
             }
 

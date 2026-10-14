@@ -3,7 +3,6 @@ package com.hr.manager.routes
 import com.hr.auth.models.AuthPrincipal
 import com.hr.config.DatabaseFactory.dbQuery
 import com.hr.manager.repositories.ManagerUsersByFilterResult
-
 import com.hr.manager.services.ManagerUsersByFilterService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.principal
@@ -13,48 +12,86 @@ import io.ktor.server.routing.get
 
 fun Route.managerUsersByFilterRoutes() {
     get("/users-per-department/manager") {
+        val requestStartedAt =
+            System.currentTimeMillis()
+
         println(
             "=================================================="
         )
 
         println(
-            "GET /api/manager/users-per-department request received"
+            "Manager filtered-users request started"
         )
 
         val principal =
             call.principal<AuthPrincipal>()
-                ?: return@get call.respond(
-                    HttpStatusCode.Unauthorized,
-                    mapOf(
-                        "detail" to
-                                "Authentication is required."
-                    )
+
+        if (principal == null) {
+            println(
+                "Manager filtered-users request rejected: " +
+                        "authentication is required"
+            )
+
+            println(
+                "Manager route total duration: ${
+                    System.currentTimeMillis() -
+                            requestStartedAt
+                } ms"
+            )
+
+            println(
+                "=================================================="
+            )
+
+            return@get call.respond(
+                HttpStatusCode.Unauthorized,
+                mapOf(
+                    "detail" to
+                            "Authentication is required."
                 )
-
-        println(
-            "Authenticated account ID: ${principal.accountId}"
-        )
-
-        println(
-            "Authenticated user ID: ${principal.userId}"
-        )
-
-        println(
-            "Authenticated role: ${principal.role}"
-        )
+            )
+        }
 
         val requestedFilter =
             call.request
                 .queryParameters["dept"]
                 ?.trim()
-                ?: ""
+                .orEmpty()
+
+        if (requestedFilter.isBlank()) {
+            println(
+                "Manager filtered-users request rejected: " +
+                        "filter is required"
+            )
+
+            println(
+                "Manager route total duration: ${
+                    System.currentTimeMillis() -
+                            requestStartedAt
+                } ms"
+            )
+
+            println(
+                "=================================================="
+            )
+
+            return@get call.respond(
+                HttpStatusCode.BadRequest,
+                mapOf(
+                    "dept" to
+                            listOf(
+                                "A filter value is required."
+                            )
+                )
+            )
+        }
 
         val page =
             call.request
                 .queryParameters["page"]
                 ?.toIntOrNull()
                 ?.coerceAtLeast(
-                    1
+                    minimumValue = 1
                 )
                 ?: 1
 
@@ -63,25 +100,25 @@ fun Route.managerUsersByFilterRoutes() {
                 .queryParameters["page_size"]
                 ?.toIntOrNull()
                 ?.coerceIn(
-                    minimumValue =
-                        1,
-
-                    maximumValue =
-                        100
+                    minimumValue = 1,
+                    maximumValue = 100
                 )
                 ?: 10
 
         println(
-            "Requested filter: $requestedFilter"
+            "Manager filter: $requestedFilter"
         )
 
         println(
-            "Requested page: $page"
+            "Manager page: $page"
         )
 
         println(
-            "Requested page size: $pageSize"
+            "Manager page size: $pageSize"
         )
+
+        val transactionStartedAt =
+            System.currentTimeMillis()
 
         val result =
             try {
@@ -101,12 +138,14 @@ fun Route.managerUsersByFilterRoutes() {
                                 pageSize,
 
                             requestPath =
-                                "/api/manager/users-per-department"
+                                "/api/manager/users-per-department/manager"
                         )
                 }
-            } catch (exception: Exception) {
+            } catch (
+                exception: Exception
+            ) {
                 println(
-                    "Unable to process Manager users-by-filter request"
+                    "Manager filtered-users transaction failed"
                 )
 
                 println(
@@ -115,6 +154,22 @@ fun Route.managerUsersByFilterRoutes() {
 
                 println(
                     "Error message: ${exception.message}"
+                )
+
+                exception.printStackTrace()
+
+                println(
+                    "Manager transaction duration before failure: ${
+                        System.currentTimeMillis() -
+                                transactionStartedAt
+                    } ms"
+                )
+
+                println(
+                    "Manager route total failed duration: ${
+                        System.currentTimeMillis() -
+                                requestStartedAt
+                    } ms"
                 )
 
                 println(
@@ -130,14 +185,18 @@ fun Route.managerUsersByFilterRoutes() {
                 )
             }
 
+        println(
+            "Manager service and transaction duration: ${
+                System.currentTimeMillis() -
+                        transactionStartedAt
+            } ms"
+        )
+
+        val responseStartedAt =
+            System.currentTimeMillis()
+
         when (result) {
             is ManagerUsersByFilterResult.Success -> {
-                println(
-                    "Manager filtered users returned successfully"
-                )
-
-
-
                 call.respond(
                     HttpStatusCode.OK,
                     result.response
@@ -165,9 +224,23 @@ fun Route.managerUsersByFilterRoutes() {
             }
 
             ManagerUsersByFilterResult.ManagerAccountInactive -> {
+                call.respond(
+                    HttpStatusCode.Forbidden,
+                    mapOf(
+                        "detail" to
+                                "This Manager account is inactive."
+                    )
+                )
             }
 
             ManagerUsersByFilterResult.ManagerRegionNotAssigned -> {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf(
+                        "detail" to
+                                "A region has not been assigned to this Manager."
+                    )
+                )
             }
 
             ManagerUsersByFilterResult.FilterRequired -> {
@@ -192,5 +265,23 @@ fun Route.managerUsersByFilterRoutes() {
                 )
             }
         }
+
+        println(
+            "Manager response duration: ${
+                System.currentTimeMillis() -
+                        responseStartedAt
+            } ms"
+        )
+
+        println(
+            "Manager route total duration: ${
+                System.currentTimeMillis() -
+                        requestStartedAt
+            } ms"
+        )
+
+        println(
+            "=================================================="
+        )
     }
 }

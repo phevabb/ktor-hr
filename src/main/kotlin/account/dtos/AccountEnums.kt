@@ -66,6 +66,10 @@ enum class SalaryPoint {
     POINT_15
 }
 
+
+
+
+
 @Serializable
 enum class SalaryLevel {
     SS_5,

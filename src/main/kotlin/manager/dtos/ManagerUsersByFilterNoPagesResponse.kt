@@ -13,6 +13,6 @@ data class ManagerUsersByFilterNoPagesResponse(
 
     val count: Int,
 
-    val users:
-    List<AccountResponse>
+
+    val users: List<ManagerFilteredUserResponse>
 )

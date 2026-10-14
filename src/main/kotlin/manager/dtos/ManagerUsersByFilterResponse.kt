@@ -23,5 +23,5 @@ data class ManagerUsersByFilterResults(
     val count: Int,
 
     val users:
-    List<AccountResponse>
+    List<ManagerFilteredUserResponse>
 )
